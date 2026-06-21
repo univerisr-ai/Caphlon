@@ -1,0 +1,49 @@
+# =============================================================================
+# Project Underdog - Docker Compose
+# =============================================================================
+# Start: docker compose up -d
+# Stop:  docker compose down
+
+version: "3.9"
+
+services:
+  orchestrator:
+    build: .
+    container_name: underdog-orchestrator
+    ports:
+      - "${UNDERDOG_PORT:-8800}:8800"
+    environment:
+      - UNDERDOG_HOST=0.0.0.0
+      - UNDERDOG_PORT=8800
+      - UNDERDOG_DB_URL=sqlite+aiosqlite:///data/underdog.db
+      - UNDERDOG_LOG_LEVEL=${UNDERDOG_LOG_LEVEL:-INFO}
+      - UNDERDOG_LOG_FORMAT=${UNDERDOG_LOG_FORMAT:-text}
+      - UNDERDOG_LLM_PROVIDER=${UNDERDOG_LLM_PROVIDER:-none}
+      - UNDERDOG_LLM_API_KEY=${UNDERDOG_LLM_API_KEY:-}
+    volumes:
+      - underdog_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8800/health').raise_for_status()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build: .
+    container_name: underdog-worker
+    profiles:
+      - worker
+    environment:
+      - UNDERDOG_URL=ws://orchestrator:8800/ws
+      - UNDERDOG_LLM_PROVIDER=${UNDERDOG_LLM_PROVIDER:-none}
+      - UNDERDOG_LLM_API_KEY=${UNDERDOG_LLM_API_KEY:-}
+    depends_on:
+      orchestrator:
+        condition: service_healthy
+    command: ["python", "-m", "project_underdog.main", "worker", "--name", "docker-worker"]
+    restart: unless-stopped
+
+volumes:
+  underdog_data:
+    driver: local

@@ -1,0 +1,23 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.env
+.venv/
+node_modules/
+data/
+*.zip
+core/
+"Dagitik Ogrenme (Federated Learning) - En Iyiler/"
+"Orkestrasyon (Ana Merkez) - En Iyiler/"
+"Token Tasarrufu - En Iyiler/"
+"Uzman Ajanlar (VBS'ler) - En Iyiler/"
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+dist/
+build/
+*.egg-info/

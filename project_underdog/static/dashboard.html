@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Underdog - Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0a0e17;color:#e0e6ed;min-height:100vh}
+.header{background:linear-gradient(135deg,#1a1f35,#0d1117);border-bottom:2px solid #00d4aa;padding:16px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:22px;color:#00d4aa}
+.header .badge{background:#00d4aa22;color:#00d4aa;padding:4px 12px;border-radius:12px;font-size:12px}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.card{background:#141b2d;border:1px solid #1e2a3a;border-radius:12px;padding:20px}
+.card h3{color:#8b9bb4;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.card .value{font-size:28px;font-weight:700;color:#e0e6ed}
+.card.green .value{color:#00d4aa}
+.card.red .value{color:#ff4d6a}
+.card.yellow .value{color:#ffb84d}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.panels{grid-template-columns:1fr}}
+.panel{background:#141b2d;border:1px solid #1e2a3a;border-radius:12px;overflow:hidden}
+.panel-header{background:#1a1f35;padding:12px 16px;border-bottom:1px solid #1e2a3a;font-weight:600}
+.panel-body{padding:16px;max-height:400px;overflow-y:auto}
+.task-item,.worker-item{display:flex;justify-content:space-between;padding:10px 12px;margin-bottom:6px;background:#0d1117;border-radius:8px;border-left:3px solid #1e2a3a;font-size:13px}
+.task-item .status-badge,.worker-item .status-badge{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.status-verified{background:#00d4aa22;color:#00d4aa}
+.status-pending{background:#ffb84d22;color:#ffb84d}
+.status-rejected{background:#ff4d6a22;color:#ff4d6a}
+.status-in_progress{background:#4d9fff22;color:#4d9fff}
+.status-idle{background:#00d4aa22;color:#00d4aa}
+.status-busy{background:#ffb84d22;color:#ffb84d}
+.status-offline{background:#ff4d6a22;color:#ff4d6a}
+.form-section{background:#141b2d;border:1px solid #1e2a3a;border-radius:12px;padding:20px;margin-bottom:24px}
+.form-section h2{color:#00d4aa;margin-bottom:16px;font-size:16px}
+.form-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:11px;color:#8b9bb4;text-transform:uppercase}
+.form-group input,.form-group select,.form-group textarea{background:#0d1117;border:1px solid #1e2a3a;color:#e0e6ed;padding:8px 12px;border-radius:8px;font-size:13px;outline:none;min-width:140px}
+.form-group input:focus,.form-group select:focus{ border-color:#00d4aa}
+.btn{background:#00d4aa;color:#0a0e17;border:none;padding:9px 20px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer}
+.btn:hover{background:#00e8bb}
+.refresh{font-size:11px;color:#8b9bb4;margin-top:8px}
+.error{color:#ff4d6a;font-size:12px;margin-top:4px}
+.result-box{background:#0d1117;border-radius:8px;padding:12px;margin-top:12px;font-size:13px;white-space:pre-wrap;max-height:200px;overflow-y:auto}
+.honeypot{opacity:.5;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐕 Project Underdog</h1>
+  <span class="badge" id="connStatus">bağlanıyor...</span>
+</div>
+
+<div class="container">
+  <div class="grid">
+    <div class="card"><h3>İşçiler</h3><div class="value" id="workers">0</div></div>
+    <div class="card green"><h3>Tamamlanan Görev</h3><div class="value" id="completed">0</div></div>
+    <div class="card yellow"><h3>Bekleyen</h3><div class="value" id="pending">0</div></div>
+    <div class="card"><h3>Aktif</h3><div class="value" id="active">0</div></div>
+    <div class="card red"><h3>Reddedilen</h3><div class="value" id="rejected">0</div></div>
+  </div>
+
+  <div class="form-section">
+    <h2>📝 Görev Oluştur</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tür</label>
+        <select id="taskType">
+          <option value="qa_generation">Soru-Cevap</option>
+          <option value="research">Araştırma</option>
+          <option value="ping">Ping Testi</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>Soru</label>
+        <input id="taskQuestion" placeholder="Soruyu yaz..." style="width:100%">
+      </div>
+      <div class="form-group">
+        <label>Min İşçi</label>
+        <input id="taskMinWorkers" type="number" value="1" min="1" max="10" style="width:70px">
+      </div>
+      <button class="btn" onclick="createTask()" style="align-self:flex-end">Gönder</button>
+    </div>
+    <div id="taskResult" class="result-box" style="display:none"></div>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <div class="panel-header">🖥️ İşçiler <span id="workerCount" style="color:#8b9bb4;font-weight:400">(0)</span></div>
+      <div class="panel-body" id="workerList">Yükleniyor...</div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">📋 Görevler <span id="taskCount" style="color:#8b9bb4;font-weight:400">(0)</span></div>
+      <div class="panel-body" id="taskList">Yükleniyor...</div>
+    </div>
+  </div>
+  <div class="refresh" id="refreshInfo"></div>
+</div>
+
+<script>
+const API = window.location.origin;
+
+let lastResponse = null;
+
+function statusClass(s){return 'status-'+s}
+
+async function fetchAPI(path){
+  try{const r=await fetch(API+path);
+    if(!r.ok)throw new Error(r.status);
+    return await r.json()}catch(e){return null}
+}
+
+async function refresh(){
+  const [health,workers,stats,tasks]=await Promise.all([
+    fetchAPI('/health'),fetchAPI('/workers'),fetchAPI('/stats'),fetchAPI('/tasks')
+  ]);
+
+  const badge=document.getElementById('connStatus');
+  if(health){
+    badge.textContent='🟢 v'+health.version;
+    badge.style.color='#00d4aa';
+  }else{
+    badge.textContent='🔴 bağlantı yok';
+    badge.style.color='#ff4d6a';
+  }
+
+  if(stats){
+    document.getElementById('workers').textContent=stats.workers||0;
+    document.getElementById('completed').textContent=stats.completed_tasks||0;
+    document.getElementById('pending').textContent=stats.pending_tasks||0;
+    document.getElementById('active').textContent=stats.active_tasks||0;
+    document.getElementById('rejected').textContent=stats.rejected_tasks||0;
+  }
+
+  if(workers?.workers){
+    document.getElementById('workerCount').textContent='('+workers.workers.length+')';
+    let html='';
+    for(const w of workers.workers){
+      html+=`<div class="worker-item">
+        <div><strong>${w.name}</strong> <span style="color:#8b9bb4;font-size:11px">${w.worker_id}</span></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="color:#8b9bb4;font-size:11px">⭐${w.reputation_score?.toFixed(2)||'1.00'}</span>
+          <span class="status-badge ${statusClass(w.status)}">${w.status}</span>
+        </div>
+      </div>`;
+    }
+    document.getElementById('workerList').innerHTML=html||'<div style="color:#8b9bb4">İşçi yok</div>';
+  }
+
+  if(tasks?.tasks){
+    document.getElementById('taskCount').textContent='('+tasks.tasks.length+')';
+    let html='';
+    const sorted=tasks.tasks.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+    for(const t of sorted){
+      const isHP=t.task_type==='honeypot';
+      html+=`<div class="task-item ${isHP?'honeypot':''}">
+        <div>
+          <div style="font-weight:500">${isHP?'🪤 Tuzak':t.description?.substring(0,50)||t.task_type}</div>
+          <div style="color:#8b9bb4;font-size:10px">${t.task_id} | ${t.task_type}</div>
+        </div>
+        <span class="status-badge ${statusClass(t.status)}">${t.status}</span>
+      </div>`;
+    }
+    document.getElementById('taskList').innerHTML=html||'<div style="color:#8b9bb4">Görev yok</div>';
+  }
+
+  document.getElementById('refreshInfo').textContent='Son güncelleme: '+new Date().toLocaleTimeString();
+}
+
+async function createTask(){
+  const type=document.getElementById('taskType').value;
+  const question=document.getElementById('taskQuestion').value.trim();
+  const minW=document.getElementById('taskMinWorkers').value;
+
+  if(!question){alert('Soru gir!');return}
+
+  const box=document.getElementById('taskResult');
+  box.style.display='block';
+  box.textContent='Gönderiliyor...';
+
+  try{
+    const resp=await fetch(API+'/tasks?'+new URLSearchParams({
+      task_type:type,description:question,min_workers:minW
+    }),{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({question:question})});
+
+    const data=await resp.json();
+    box.innerHTML='<span style="color:#00d4aa">✅ Görev oluşturuldu!</span>\n'+
+      `ID: ${data.task_id}\nTür: ${data.task_type}\nDurum: ${data.status}\n`+
+      `<button class="btn" style="margin-top:8px;font-size:11px;padding:6px 12px" onclick="checkResult('${data.task_id}')">Sonucu Kontrol Et</button>`;
+    document.getElementById('taskQuestion').value='';
+    lastResponse=data;
+  }catch(e){
+    box.innerHTML='<span style="color:#ff4d6a">❌ Hata: '+e.message+'</span>';
+  }
+}
+
+async function checkResult(taskId){
+  const box=document.getElementById('taskResult');
+  box.innerHTML='Kontrol ediliyor...';
+  const data=await fetchAPI('/tasks/'+taskId);
+  if(data){
+    box.innerHTML='<strong>Görev:</strong> '+data.task_id+'\n'+
+      '<strong>Durum:</strong> <span class="status-badge '+statusClass(data.status)+'">'+data.status+'</span>\n'+
+      '<strong>Sonuç:</strong>\n'+JSON.stringify(data.results||data.consensus_result||{},null,2);
+  }
+}
+
+setInterval(refresh,4000);
+refresh();
+</script>
+</body>
+</html>
