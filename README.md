@@ -96,7 +96,3 @@ caphlon init         # Proje başlat
 - Python 3.11+ (fine-tuning)
 - Rust 1.89+ (tokenless)
 - 2GB+ RAM (CPU-only çalışır)
-
-## Lisans
-
-[LICENSE.md](LICENSE.md)
