@@ -99,4 +99,4 @@ caphlon init         # Proje başlat
 
 ## Lisans
 
-MIT — [proje.md](proje.md)
+[LICENSE.md](LICENSE.md)
