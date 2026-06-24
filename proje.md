@@ -1,6 +1,6 @@
 
 
-# 🐕 PROJECT UNDERDOG  
+# ⚡ CAPHLON  
 ## *Kovan Zekası ile Topluluk Destekli, Merkeziyetsiz AI Geliştirme Sistemi*
 
 ---
@@ -32,27 +32,30 @@ Sistem, dünyanın dört bir yanındaki gönüllülerin sistemlerini (ücretsiz 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     MERKEZİ ORKESTRATÖR                       │
-│           (Qualixar OS / Conductor)                          │
+│           (Qualixar OS + Open Design + MiMo Bridges)         │
 │  - Görev kuyruğu ve dağıtımı                                 │
 │  - Benzersiz bilgi kontrolü (hash + vektör DB)              │
 │  - Doğrulama (çoğunluk oyu, itibar sistemi)                 │
-│  - Federated learning koordinasyonu                         │
+│  - Tasarım pipeline'ı (Open Design bridge)                  │
+│  - Memory + Compose workflow (MiMo bridge)                  │
 └─────────────────────────────────────────────────────────────────┘
                               │
          ┌────────────────────┼────────────────────┐
          │                    │                    │
-    ┌────▼────┐          ┌────▼────┐          ┌────▼────┐
-    │ VBS-1   │          │ VBS-2   │          │ VBS-3   │
-    │Hermes   │          │Hermes   │          │Hermes   │
-    │Agent    │          │Agent    │          │Agent    │
-    │+Unsloth │          │+Unsloth │          │+Unsloth │
-    └────┬────┘          └────┬────┘          └────┬────┘
-         │                    │                    │
-    ┌────▼─────────────────────────────────────────────▼────┐
-    │         TOKEN OPTİMİZASYON KATMANI (Seçili)           │
-    │  tokenless, token-pilot, reducethemtokens,           │
-    │  openclacky, graphsift, entroly, cge-compiler        │
-    └───────────────────────────────────────────────────────┘
+    ┌────▼────────────┐ ┌────▼────────────┐ ┌────▼────────────────┐
+    │  DESIGN KATMANI │ │ MEMORY/WORKFLOW │ │  VBS KATMANI       │
+    │  Open Design    │ │ MiMo Code       │ │  Hermes Agent      │
+    │  • 100+ skill   │ │ • MEMORY.md     │ │  + Unsloth         │
+    │  • 150 des.sys  │ │ • Compose mode  │ │  + OpenCode skills │
+    │  • 261 plugin   │ │ • Dream/Distill │ │                    │
+    │  • HyperFrames  │ │ • Goal/Stop     │ │                    │
+    └─────────────────┘ └─────────────────┘ └────────────────────┘
+                              │
+    ┌─────────────────────────────────────────────────────────┐
+    │         TOKEN OPTİMİZASYON KATMANI (Seçili)            │
+    │  tokenless, token-pilot, reducethemtokens,            │
+    │  openclacky, graphsift, entroly, cge-compiler         │
+    └────────────────────────────────────────────────────────┘
                               │
     ┌─────────────────────────────────────────────────────┐
     │         DAĞITIK ÖĞRENME / FINE-TUNING              │
@@ -91,10 +94,12 @@ Manifestoda belirtilen 4 katmanlı güvenlik, aşağıdaki teknik bileşenlerle 
 
 ### 🎯 5. İndirdiğin Araçların Projedeki Kesin Rolleri
 
-| Dosya | Kategori | Bu Sistemdeki Görevi |
+| Dosya / Klasör | Kategori | Bu Sistemdeki Görevi |
 | :--- | :--- | :--- |
 | `hermes-agent-main.zip` | Uzman Ajan | Her VBS'nin çekirdek motoru. Görev alır, öğretmen-öğrenci döngüsünü yürütür, sonuç üretir. |
-| `qualixar-os-main.zip` | Orkestrasyon | Ana merkez olarak kullanılır. Görev dağıtımı, mutabakat, itibar yönetimi. |
+| `qualixar-os-main/` | Orkestrasyon | Ana merkez. Görev dağıtımı, mutabakat, itibar yönetimi. **Open Design + MiMo Code bridge'leri burada çalışır.** |
+| `open-design-main/` | **Design Pipeline** (entegre) | UI/UX tasarımı, 100+ skill, 150 design sistemi, 261 plugin, HyperFrames video. Qualixar OS üzerinden kullanılır. |
+| `MiMo-Code-main/` | **Memory/Workflow** (entegre) | Persistent memory (MEMORY.md), compose mode (8 aşamalı), Dream/Distill self-improvement. Qualixar OS'a pattern olarak aktarıldı. |
 | `conductor-main.zip` | Orkestrasyon (alternatif) | Qualixar OS ile birlikte veya onun yerine denenebilir. Belirlenimci iş akışları için. |
 | `tokenless-master.zip` | Token Optimizasyonu | API şema sıkıştırma ile %60-90 token tasarrufu. Tüm iletişimde kullanılır. |
 | `token-pilot-master.zip` | Token Optimizasyonu | Kod tabanından sadece ihtiyaç duyulan kısımları gönderir. VBS'lerin context yükünü azaltır. |
@@ -174,12 +179,218 @@ Manifestoda belirtilen 4 katmanlı güvenlik, aşağıdaki teknik bileşenlerle 
 
 ---
 
-### 💬 9. Son Söz
+### 🧬 9. OpenCode + Aider Entegrasyonu (Yeni Katman)
 
-Project Underdog, sadece bir yazılım projesi değil; **yapay zekanın demokratikleşmesi** için bir harekettir. Elinde muazzam bir araç seti var. Şimdi sıra, bu araçları bir araya getirip ilk kıvılcımı ateşlemekte.
-
-> *"Birlikte öğrenen, birlikte güçlenir."* – Kovan Zekası Manifestosu
+Projeye eklenen **OpenCode** (`opencode-dev.zip`) ve **Aider** (`aider-main.zip`), mevcut Qualixar OS + Hermes Agent altyapısını güçlendirecek iki kritük bileşendir. Aşağıda her birinin güçlü yanları ve entegrasyon planı yer alıyor.
 
 ---
 
-Bu dokümanı `PROJECT_UNDERDOG.md` olarak kaydedip proje ana klasörüne koyabilirsin. İstersen bu planın ilk adımı olan **Qualixar OS + Hermes Agent** kurulumu için detaylı bir rehber de hazırlayabilirim. Nereden başlamak istediğini söyle, devam edelim! 🚀
+#### 9.1 OpenCode — Açık Kaynak AI Coding Agent
+
+| Özellik | Açıklama | Underdog'da Kullanımı |
+|:--------|:---------|:---------------------|
+| **Agent Sistemi** | `build` (full erişim), `plan` (salt-okunur), `@general` (yardımcı) | Qualixar OS'daki agent tiplerini zenginleştirir |
+| **Skill Sistemi** | Yüklenebilir yetenekler (playwright, git-master, frontend, vb.) | Forge'ın tool kataloğuna dinamik yetenek ekleme |
+| **MCP Entegrasyonu** | Yerleşik MCP sunucu + OAuth + katalog | Agent'ların dış araçlarla iletişimi |
+| **Background Tasks** | `run_in_background=true` ile paralel görev | VBS'lere paralel görev dağıtımı |
+| **CodeGraph** | Sembol seviyesinde kod anlama (codegraph_explore/node/callers) | Kod tabanını anlama ve bağlam yönetimi |
+| **Agent Çeşitliliği** | explore, librarian, oracle, fixer, designer | Qualixar OS'un agent havuzu |
+| **Session Yönetimi** | Dayanıklı oturumlar, context epoch | Uzun süreli görevlerde durum koruma |
+| **Provider Sistemi** | Çoklu model sağlayıcı, auth, transform | Qualixar OS'un model routing'ini güçlendirir |
+| **Config (opencode.json)** | Agents, commands, MCP, plugins | Merkezi yapılandırma formatı |
+
+**Dosya:** `opencode-dev/` — TypeScript + Bun monorepo (25+ paket)
+
+---
+
+#### 9.2 Aider — AI Pair Programmer
+
+| Özellik | Açıklama | Underdog'da Kullanımı |
+|:--------|:---------|:---------------------|
+| **Architect/Editor Modu** | İki-model: Architect planlar (üst model), Editor uygular (hızlı model) | Forge (plan) + Run (uygula) pipeline'ını 2 aşamalı yapar |
+| **RepoMap** | tree-sitter ile kod haritası, sadece ilgili sembolleri contexte ekler | Type-C protocol'üne akıllı bağlam seçici |
+| **6+ Edit Formatı** | whole file, search/replace, unified diff, edit block, fenced, patch | Agent'ların kod üretim formatlarını çeşitlendirir |
+| **Git Entegrasyonu** | Otomatik commit, commit mesajı, rollback | Çıktı yönetimine sürüm kontrolü |
+| **Lint/Test** | Her düzenlemede otomatik doğrulama | Judge pipeline'ına ek doğrulama katmanı |
+| **Voice** | Sesle kodlama | Gelecekte sesli komut desteği |
+| **SWE-bench** | Doğrulanmış benchmark başarısı | Kalite garantisi |
+| **Analytics** | Token kullanımı takibi | Maliyet optimizasyonu |
+
+**Dosya:** `aider-main/` — Python
+
+---
+
+#### 9.3 Entegrasyon Haritası
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     PROJECT UNDERDOG (Güncellenmiş)                │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  ORKESTRASYON KATMANI                                        │   │
+│  │  Qualixar OS + OpenCode Agent Sistemi                       │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │
+│  │  │  build   │  │   plan   │  │ explore  │  │ librarian│   │   │
+│  │  │ (full)   │  │(readonly)│  │  (grep)  │  │  (docs)  │   │   │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │   │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │   │
+│  │  │  oracle  │  │  fixer   │  │ designer │  │ @general │   │   │
+│  │  │(danışman)│  │(düzeltici)│  │  (UI)    │  │(yardımcı)│   │   │
+│  │  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                               │                                    │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  FORGE AI (Yeniden Tasarlandı)                              │   │
+│  │  ┌────────────────┐  ┌────────────────┐                    │   │
+│  │  │  Architect     │  │  Editor        │  ← Aider'dan      │   │
+│  │  │  (Planlama)    │  │  (Uygulama)    │    esinlenme       │   │
+│  │  └────────────────┘  └────────────────┘                    │   │
+│  │  ┌────────────────┐  ┌────────────────┐                    │   │
+│  │  │  CodeGraph     │  │  RepoMap       │  ← OpenCode +     │   │
+│  │  │  (Sembol)      │  │  (Bağımlılık)  │    Aider birleşimi │   │
+│  │  └────────────────┘  └────────────────┘                    │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                               │                                    │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  TYPE-C OUTPUT (Gelişmiş)                                   │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │   │
+│  │  │ whole    │ │search/   │ │ unified  │ │  patch   │      │   │
+│  │  │ file     │ │replace   │ │ diff     │ │          │      │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └──────────┘      │   │
+│  │  ← Aider'in 6 edit formatından uyarlanmıştır               │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                               │                                    │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  VBS KATMANI (Hermes Agent + OpenCode Skills)              │   │
+│  │  Yetenekler: playwright, git-master, debugging, security,  │   │
+│  │  frontend, remove-ai-slops, codemap, clonedeps, deepwork   │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                               │                                    │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  TOKEN OPTİMİZASYONU (tokenless + Aider RepoMap)           │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                               │                                    │
+│  ┌─────────────────────────────────────────────────────────────┐   │
+│  │  FINE-TUNING / FEDERATED LEARNING                          │   │
+│  │  Flower, LlamaFactory, Unsloth                             │   │
+│  └─────────────────────────────────────────────────────────────┘   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 9.4 Aşama 7: OpenCode + Aider Entegrasyon Planı
+
+| Adım | Süre | Açıklama |
+|:-----|:-----|:---------|
+| **7.1** | 3 gün | OpenCode'dan agent tiplerini (explore, librarian, oracle, fixer) Qualixar OS'a aktar |
+| **7.2** | 3 gün | Aider'ın Architect/Editor modunu Forge + Run pipeline'ına uyarla |
+| **7.3** | 2 gün | RepoMap mantığını Type-C protocol'üne ekle (bağlam seçici) |
+| **7.4** | 2 gün | OpenCode'un Skill sistemini Forge'ın tool kataloğuna entegre et |
+| **7.5** | 2 gün | Aider'ın git + lint entegrasyonunu Judge pipeline'ına ekle |
+| **7.6** | 1 gün | opencode.json formatını Qualixar OS'un config sistemine uyarla |
+| **7.7** | Devam eden | Performans testleri, benchmark karşılaştırmaları |
+
+---
+
+### 📋 10. Yapılan Çalışmalar (Güncel Durum)
+
+| Tarih | Çalışma | Detay |
+|:-----|:--------|:------|
+| **Haz 2026** | **Qualixar OS Kurulumu** | Server başlatıldı, dashboard çalışıyor. Provider sistemi yapılandırıldı. |
+| **Haz 2026** | **MIMO API Entegrasyonu** | OpenRouter → MIMO API geçişi yapıldı. Provider tipi `openai` olarak ayarlandı. |
+| **Haz 2026** | **Forge maxTokens Fix** | MIMO modelinin ~1900 reasoning token tüketimi nedeniyle `maxTokens: 1000` → `4000` yükseltildi. Forge, Refine ve Radical redesign çağrılarında düzeltildi. |
+| **Haz 2026** | **validAgents Bug Fix** | `a.role && a.role !== 'agent' \|\| a.systemPrompt` filtresinde operator precedence hatası düzeltildi (parantez eklendi). |
+| **Haz 2026** | **Türkçe Task Doğrulaması** | "Python ile dosya satırlarını numaralandırma" görevi başarıyla tam pipeline çalıştı: Forge → Run → Judge → Output (%100, 0 redesign). |
+| **Haz 2026** | **Config Geçişi** | `.env` OpenRouter → MIMO API'ye çevrildi. `~/.qualixar-os/config.yaml` MIMO ile yapılandırıldı. |
+| **Haz 2026** | **OpenCode Araştırması** | opencode-dev/ kodu incelendi. Agent sistemi, Skill sistemi, CodeGraph, MCP, Background Tasks özellikleri belirlendi. |
+| **Haz 2026** | **Aider Araştırması** | aider-main/ kodu incelendi. Architect/Editor modu, RepoMap, 6 edit formatı, git/lint entegrasyonu belirlendi. |
+| **Haz 2026** | **Entegrasyon Planı** | OpenCode + Aider'ın güçlü yanlarının Underdog'a nasıl entegre edileceği planlandı (Aşama 7). |
+| **Haz 2026** | **Open Design Entegrasyonu** | Open Design (nexu-io/open-design) Qualixar OS'a entegre edildi. 100+ skill, 150 design sistemi, 261 plugin, HyperFrames video. Tasarım pipeline'ı eklendi. Detay: `docs/integration/OPEN_DESIGN_INTEGRATION.md` |
+| **Haz 2026** | **MiMo Code Entegrasyonu** | MiMo Code (Xiaomi fork of OpenCode) özellikleri Qualixar OS'a taşındı. Persistent memory (MEMORY.md), Compose mode (8 aşamalı workflow), Dream/Distill self-improvement. Detay: `docs/integration/MIMO_CODE_INTEGRATION.md` |
+| **Haz 2026** | **Boşluk Analizi** | Projenin 10 ana eksik yeteneği belirlendi ve Open Design + MiMo Code ile kapatıldı. Detay: `docs/integration/GAP_ANALYSIS.md` |
+
+---
+
+### 🎨 11. Open Design + MiMo Code Entegrasyonu (Yeni Katmanlar)
+
+Projeye eklenen **Open Design** (`open-design-main/`) ve **MiMo Code** (`MiMo-Code-main/`),
+Qualixar OS'un yeteneklerini **tasarım, görsel üretim, bellek yönetimi ve workflow**
+alanlarında genişletir.
+
+---
+
+#### 11.1 Open Design — Tasarım Pipeline'ı
+
+Open Design, Anthropic'in Claude Design'ına açık kaynak alternatiftir. Qualixar OS'a
+görsel tasarım yeteneği kazandırır.
+
+| Özellik | Açıklama | Underdog'da Kullanımı |
+|:--------|:---------|:---------------------|
+| **100+ Skill** | prototype, deck, image, video, dashboard | Forge AI creative task tiplerinde kullanılır |
+| **150 Design Sistemi** | Linear, Stripe, Apple, Vercel, Notion... | Brand-grade çıktı için hazır tasarım dili |
+| **261 Plugin** | scenario, template, atom, migration | Marketplace'i zenginleştirir |
+| **HyperFrames** | HTML+CSS+GSAP → MP4 motion grafik | Video/motion içerik üretimi |
+| **MCP Server** | 22+ coding agent ile entegrasyon | Qualixar OS MCP tool set'ine eklendi |
+| **BYOK Proxy** | SSRF-korumalı multi-provider proxy | Güvenli model yönlendirme |
+
+**Underdog'a Kattıkları:**
+- UI/UX tasarım pipeline'ı (öncesi: yok, sonrası: 100+ skill)
+- Brand-grade görsel üretim (öncesi: yok, sonrası: 150 design sistemi)
+- Video/motion grafik (öncesi: yok, sonrası: HyperFrames)
+- Sunum/deck oluşturma (öncesi: yok, sonrası: 15 template × 36 tema)
+
+**Detaylı doküman:** `docs/integration/OPEN_DESIGN_INTEGRATION.md`
+
+---
+
+#### 11.2 MiMo Code — Memory ve Workflow
+
+MiMo Code (Xiaomi fork of OpenCode), terminal-native AI coding assistant. Qualixar OS'a
+gelişmiş bellek yönetimi ve specs-driven workflow kazandırır.
+
+| Özellik | Açıklama | Underdog'da Kullanımı |
+|:--------|:---------|:---------------------|
+| **Persistent Memory** | MEMORY.md + SQLite FTS5 + checkpoint | SLM-Lite'ı tamamlayan pratik bellek katmanı |
+| **Compose Mode** | 8 aşamalı specs-driven workflow | Forge AI'da yeni "compose" topolojisi |
+| **Dream/Distill** | Self-improvement: knowledge + skill extraction | SkillEvolver roadmap'i için temel |
+| **Goal/Stop** | Independent judge ile premature stop önleme | Judge pipeline'ını güçlendirir |
+| **Subagent System** | Background execution, parallel çalışma | VBS task dağıtımını optimize eder |
+
+**Underdog'a Kattıkları:**
+- Persistent memory (öncesi: SLM-Lite, sonrası: + MEMORY.md + checkpoint)
+- Specs-driven workflow (öncesi: Forge AI task, sonrası: 8 aşamalı compose)
+- Self-improvement (öncesi: SkillEvolver roadmap, sonrası: Dream/Distill şimdi)
+
+**Detaylı doküman:** `docs/integration/MIMO_CODE_INTEGRATION.md`
+
+---
+
+#### 11.3 Boşluk Analizi
+
+Entegrasyon öncesi 10 ana eksik yetenek belirlendi ve kapatıldı:
+
+| # | Eksik Yetenek | Çözüm |
+|:--|:--------------|:------|
+| 1 | UI/UX tasarım pipeline'ı | Open Design: 100+ skill, prototype, deck |
+| 2 | Brand design system yönetimi | Open Design: 150 DESIGN.md sistemi |
+| 3 | Creative/görsel output | Open Design: HTML/PDF/PPTX/MP4 |
+| 4 | Pratik persistent memory | MiMo: MEMORY.md + checkpoint.md |
+| 5 | Specs-driven workflow | MiMo: Compose mode (8 aşama) |
+| 6 | Self-improvement döngüsü | MiMo: Dream/Distill |
+| 7 | Premature stop önleme | MiMo: Goal/Stop + judge |
+| 8 | Design critique | Open Design: 5-boyutlu self-critique |
+| 9 | Figma/Pencil → Code | Open Design: Migration plugin'leri |
+| 10 | Video/motion grafik | Open Design: HyperFrames HTML→MP4 |
+
+**Detaylı döküman:** `docs/integration/GAP_ANALYSIS.md`
+
+---
+
+### 💬 12. Son Söz
+
+Project Underdog, sadece bir yazılım projesi değil; **yapay zekanın demokratikleşmesi** için bir harekettir. OpenCode'un agent çeşitliliği ve Aider'ın kanıtlanmış kodlama yetenekleri, Qualixar OS'un orkestrasyon gücüyle birleştiğinde ortaya çıkacak sinerji, "zayıf modelleri güçlü kılma" vizyonunu gerçeğe dönüştürecek.
+
+> *"Birlikte öğrenen, birlikte güçlenir."* – Kovan Zekası Manifestosu

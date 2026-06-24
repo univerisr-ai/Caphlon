@@ -1,0 +1,125 @@
+{
+  "name": "caphlon",
+  "displayName": "Caphlon",
+  "description": "Caphlon — Unified AI Agent Platform in your IDE",
+  "version": "0.1.0",
+  "publisher": "caphlon",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caphlon/caphlon"
+  },
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#0a0a0f",
+    "theme": "dark"
+  },
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "caphlon.openTerminal",
+        "title": "Caphlon: Open Terminal"
+      },
+      {
+        "command": "caphlon.run",
+        "title": "Caphlon: Run Task..."
+      },
+      {
+        "command": "caphlon.dev",
+        "title": "Caphlon: Start Dev Mode"
+      },
+      {
+        "command": "caphlon.design",
+        "title": "Caphlon: Design Pipeline"
+      },
+      {
+        "command": "caphlon.status",
+        "title": "Caphlon: System Status"
+      },
+      {
+        "command": "caphlon.doctor",
+        "title": "Caphlon: Diagnostics"
+      },
+      {
+        "command": "caphlon.compose",
+        "title": "Caphlon: Start Compose Workflow"
+      },
+      {
+        "command": "caphlon.addFile",
+        "title": "Caphlon: Add File Reference to Terminal",
+        "icon": {
+          "light": "images/button-dark.svg",
+          "dark": "images/button-light.svg"
+        }
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "caphlon.addFile",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "caphlon.addFile",
+          "when": "never"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "caphlon.openTerminal",
+        "key": "cmd+escape",
+        "mac": "cmd+escape",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "caphlon.addFile",
+        "key": "cmd+alt+k",
+        "mac": "cmd+alt+k",
+        "when": "editorTextFocus"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "caphlon-sidebar",
+          "title": "Caphlon",
+          "icon": "images/button-light.svg"
+        }
+      ]
+    },
+    "views": {
+      "caphlon-sidebar": [
+        {
+          "type": "webview",
+          "id": "caphlon.dashboard",
+          "name": "Dashboard"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "node esbuild.js --production",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "vsce package --no-dependencies",
+    "lint": "eslint src/"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.94.0",
+    "esbuild": "^0.24.0",
+    "vsce": "^2.15.0"
+  }
+}
