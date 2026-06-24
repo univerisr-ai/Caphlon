@@ -1,10 +1,3 @@
-/**
- * Caphlon CLI — Main entry point
- *
- * Unified command-line interface for the Caphlon AI Agent Platform.
- * Wraps Qualixar OS, Open Design, and MiMo Code into one coherent CLI.
- */
-
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
 import { devCommand } from './commands/dev.js';
@@ -13,10 +6,19 @@ import { statusCommand } from './commands/status.js';
 import { doctorCommand } from './commands/doctor.js';
 import { designCommand } from './commands/design.js';
 import { composeCommand } from './commands/compose.js';
+import { startTui } from './tui/index.js';
 
 const VERSION = '0.1.0';
 
 export async function run(): Promise<void> {
+  const args = process.argv.slice(2);
+  const hasSubcommand = args.length > 0 && !args[0].startsWith('-');
+
+  if (!hasSubcommand && args.length === 0) {
+    await startTui();
+    return;
+  }
+
   const program = new Command();
 
   program
@@ -24,7 +26,20 @@ export async function run(): Promise<void> {
     .description('Caphlon — Unified AI Agent Platform')
     .alias('caph')
     .version(VERSION, '-v, --version', 'Show version')
-    .helpOption('-h, --help', 'Show help');
+    .helpOption('-h, --help', 'Show help')
+    .addHelpText('after', `
+Interactive TUI:
+  caphlon    Launch the interactive terminal interface
+
+Commands:
+  init       Initialize a new Caphlon project
+  dev        Start the Caphlon agent + dashboard
+  run        Run a task via Caphlon agent system
+  status     Check system status
+  doctor     Run system diagnostics
+  design     Design pipeline (Open Design integration)
+  compose    Compose mode — specs-driven development workflow (MiMo Code)
+`);
 
   // -----------------------------------------------------------------------
   // caphlon init — Initialize a new project
