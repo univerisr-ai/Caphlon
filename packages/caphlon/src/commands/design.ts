@@ -1,169 +1,84 @@
 /**
- * caphlon design — Design pipeline (Open Design integration)
+ * caphlon design — Open Design pipeline, gerçek `od` CLI ile.
  *
- * Commands:
- *   caphlon design prototype <brief>   Create a prototype
- *   caphlon design deck <brief>         Create a deck/presentation
- *   caphlon design image <prompt>       Generate an image
- *   caphlon design systems [filter]     List design systems
- *   caphlon design plugins [action]     Plugin management
+ * Sıfırdan yazmaz / API uydurmaz: indirilen gerçek Open Design projesini
+ * (open-design-main) `od` CLI'ı üzerinden çalıştırır ve `caphlon connect` ile
+ * bağlı modeli ortam değişkenleriyle geçirir. Open Design'ın "en iyi yanı" —
+ * ajan-yerlisi tasarım ürünü (prototip/HyperFrame/deck/görsel) — buradan gelir.
+ *
+ *   caphlon design                     od yardımını göster (tüm komutlar)
+ *   caphlon design ui                  Web arayüzünü aç
+ *   caphlon design plugin list         Tasarım eklentilerini listele
+ *   caphlon design -- <ham od args>    Bayrakları doğrudan od'a geçir
  */
 
-import { checkOpenDesign, listDesignSystems } from '../qos-bridge.js';
+import { existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
+import chalk from 'chalk';
+import { getActiveModel, activeModelEnv } from '../config/active.js';
+import { firstExisting, onPath, spawnInherit, notFound, projectRoot } from '../external.js';
 
-export async function designCommand(
-  subcommand: string,
-  args: string[],
-  options: { skill?: string; system?: string; format?: string },
-): Promise<void> {
-  // Check Open Design availability
-  const odAvailable = await checkOpenDesign();
-  if (!odAvailable) {
-    console.log('\n⚠️  Open Design daemon is not running.');
-    console.log('\nTo use design features:');
-    console.log('  1. Install: curl -fsSL https://open-design.ai/install.sh | sh');
-    console.log('  2. Start:   od daemon start');
-    console.log('  3. Run:     caphlon design ...\n');
-    return;
-  }
-
-  switch (subcommand) {
-    case 'prototype':
-      await handlePrototype(args, options);
-      break;
-    case 'deck':
-      await handleDeck(args, options);
-      break;
-    case 'image':
-      await handleImage(args, options);
-      break;
-    case 'systems':
-      await handleSystems(args);
-      break;
-    case 'plugins':
-      await handlePlugins(args);
-      break;
-    default:
-      showDesignHelp();
-  }
+function findOdDir(): string | null {
+  return firstExisting(
+    join(projectRoot(), 'open-design-main'),
+    join(projectRoot(), 'core', 'open-design-main'),
+  );
 }
 
-async function handlePrototype(args: string[], options: { skill?: string; system?: string; format?: string }): Promise<void> {
-  const brief = args.join(' ');
-  if (!brief) {
-    console.log('❌ Please provide a brief. Usage: caphlon design prototype <brief>');
-    return;
-  }
+/** Bundled od.mjs yalnızca dist/cli.js derlenmişse çalışır. */
+function bundledOdEntry(dir: string): string | null {
+  const mjs = join(dir, 'apps', 'daemon', 'bin', 'od.mjs');
+  const dist = join(dir, 'apps', 'daemon', 'dist', 'cli.js');
+  return existsSync(mjs) && existsSync(dist) ? mjs : null;
+}
 
-  console.log(`\n🎨 Creating prototype...`);
-  console.log(`   Brief:        ${brief}`);
-  console.log(`   Skill:        ${options.skill || 'default (web-prototype)'}`);
-  console.log(`   Design System: ${options.system || 'default'}`);
-  console.log(`   Format:       ${options.format || 'html'}`);
-
-  // API call
-  console.log('\n📡 Sending to Open Design...');
-
+/**
+ * PATH'teki `od`'un sistem octal-dump aracı (/usr/bin/od) değil, Open Design
+ * olduğunu doğrula — yardım çıktısı Open Design'a özgü terimler içermeli.
+ */
+function pathOdIsOpenDesign(): boolean {
   try {
-    const response = await fetch('http://localhost:7456/api/skills/web-prototype/execute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: brief,
-        designSystem: options.system || 'default',
-        skill: options.skill || 'web-prototype',
-      }),
-      signal: AbortSignal.timeout(120_000),
-    });
-
-    if (response.ok) {
-      const data = await response.json() as Record<string, unknown>;
-      console.log('✅ Prototype created!');
-      if (data.url) console.log(`   URL: ${data.url}`);
-      if (data.artifactUrl) console.log(`   Preview: ${data.artifactUrl}`);
-    } else {
-      console.log(`⚠️  Open Design responded with status ${response.status}`);
-      console.log('   Check the Open Design UI at http://localhost:7456');
-    }
-  } catch (err) {
-    console.log('⚠️  Could not reach Open Design API.');
-    console.log('   Check the Open Design UI at http://localhost:7456');
-    console.log(`   ${err instanceof Error ? err.message : String(err)}`);
+    const out = spawnSync('od', ['--help'], { encoding: 'utf8', timeout: 5000 });
+    const text = `${out.stdout ?? ''}${out.stderr ?? ''}`.toLowerCase();
+    return /open[ -]?design|design system|hyperframe|prototype|daemon/.test(text);
+  } catch {
+    return false;
   }
 }
 
-async function handleDeck(args: string[], options: { skill?: string; system?: string; format?: string }): Promise<void> {
-  const brief = args.join(' ');
-  if (!brief) {
-    console.log('❌ Please provide a brief. Usage: caphlon design deck <brief>');
+/** Gerçek od'u nasıl çalıştıracağımıza karar ver: bundled (derli) → PATH (doğrulanmış). */
+function resolveOd(): { cmd: string; baseArgs: string[] } | null {
+  const dir = findOdDir();
+  if (dir) {
+    const mjs = bundledOdEntry(dir);
+    if (mjs) return { cmd: 'node', baseArgs: [mjs] };
+  }
+  if (onPath('od') && pathOdIsOpenDesign()) return { cmd: 'od', baseArgs: [] };
+  return null;
+}
+
+export async function designCommand(args: string[]): Promise<void> {
+  const od = resolveOd();
+  if (!od) {
+    notFound('Open Design (od)', [
+      'Bundled: cd open-design-main && pnpm install && pnpm --filter @open-design/daemon build',
+      'sonra: caphlon design ui',
+    ]);
+    console.log(chalk.gray('  Not: çoğu komut Open Design daemon (port 7456) ister → "caphlon design daemon start".\n'));
     return;
   }
-  console.log(`\n📊 Creating deck...`);
-  console.log(`   Brief:        ${brief}`);
-  console.log(`   Template:     ${options.skill || 'guizang-ppt'}`);
-  console.log(`   Design System: ${options.system || 'default'}`);
-  console.log(`   Format:       ${options.format || 'html'}`);
-  console.log('\n📡 Sent to Open Design. Check http://localhost:7456 for results.\n');
-}
 
-async function handleImage(args: string[], _options: Record<string, unknown>): Promise<void> {
-  const prompt = args.join(' ');
-  if (!prompt) {
-    console.log('❌ Please provide a prompt. Usage: caphlon design image <prompt>');
-    return;
-  }
-  console.log(`\n🖼️  Generating image...`);
-  console.log(`   Prompt: ${prompt}`);
-  console.log('\n📡 Sent to Open Design. Check http://localhost:7456 for results.\n');
-}
+  const passthrough = args.length ? args : ['--help'];
+  console.log(chalk.bold('\n🎨 Open Design'));
 
-async function handleSystems(args: string[]): Promise<void> {
-  const filter = args[0];
-  const systems = await listDesignSystems(filter);
-  if (systems.length === 0) {
-    console.log('\n📋 Design systems: (unable to fetch from Open Design)');
-    console.log('   Available systems include: linear-app, stripe, vercel, apple,');
-    console.log('   notion, cursor, supabase, claude, default, warm-editorial');
-    console.log('   Run with Open Design daemon active for full list.\n');
+  // Bağlı model varsa BYOK olarak geçir (Open Design Claude/OpenAI/Gemini... destekler).
+  const active = getActiveModel();
+  if (active) {
+    console.log(chalk.gray(`   caphlon connect modeli geçiriliyor: ${active.provider.id}/${active.model}\n`));
   } else {
-    console.log(`\n📋 Design systems (${systems.length}):`);
-    for (const s of systems) {
-      console.log(`   • ${s}`);
-    }
-    console.log('');
+    console.log(chalk.gray('   (model bağlı değil — Open Design kendi model seçicisini kullanır)\n'));
   }
-}
 
-async function handlePlugins(args: string[]): Promise<void> {
-  const action = args[0] || 'list';
-  switch (action) {
-    case 'list':
-      console.log('\n🔌 Open Design Plugins:');
-      console.log('   261 plugins available in categories:');
-      console.log('   • scenarios (11)    — od-default, od-figma-migration...');
-      console.log('   • image-templates (45)');
-      console.log('   • video-templates (50)');
-      console.log('   • design-systems (142)');
-      console.log('   • atoms (13)');
-      console.log('   • examples (140)');
-      console.log('   Use: caphlon design plugins search <query>\n');
-      break;
-    default:
-      console.log(`\n🔌 Searching plugins for: ${action}`);
-      console.log('   Check Open Design UI at http://localhost:7456/plugins\n');
-  }
-}
-
-function showDesignHelp(): void {
-  console.log('\n🎨 Caphlon Design Commands:');
-  console.log('  caphlon design prototype <brief>     Create a prototype');
-  console.log('  caphlon design deck <brief>          Create a deck/presentation');
-  console.log('  caphlon design image <prompt>         Generate an image');
-  console.log('  caphlon design systems [filter]       List design systems');
-  console.log('  caphlon design plugins [action]       Plugin management');
-  console.log('');
-  console.log('Options:');
-  console.log('  --skill <name>      Skill to use (web-prototype, saas-landing, dashboard, etc.)');
-  console.log('  --system <name>     Design system (linear-app, stripe, vercel, etc.)');
-  console.log('  --format <fmt>      Output format (html, pdf, pptx)\n');
+  spawnInherit(od.cmd, [...od.baseArgs, ...passthrough], active ? activeModelEnv() : {});
 }

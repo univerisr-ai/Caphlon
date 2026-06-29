@@ -1,25 +1,55 @@
 /**
- * caphlon compose — Compose mode (MiMo Code workflow)
+ * caphlon compose — Compose mode, gerçek MiMo Code ile.
  *
- * Specs-driven development in 8 stages:
- *   brainstorm → spec → implement → review → tdd → debug → verify → merge
+ * MiMo Code'u (Bun tabanlı, opencode-fork) sıfırdan yazmaz; indirilen gerçek
+ * projeyi (MiMo-Code-main) `compose` ajanıyla başlatır ve `caphlon connect` ile
+ * bağlı modeli ortam değişkenleriyle geçirir. MiMo'nun "en iyi yanı" — kalıcı
+ * hafıza + 8-aşamalı specs-driven compose workflow — buradan kullanılır.
+ *
+ *   caphlon compose start "<açıklama>"   Compose ajanını bu görevle başlat
+ *   caphlon compose list                  Aşamaları göster
+ *   caphlon compose resume                MiMo'yu aç (oturum seçiciyle devam)
  */
 
+import { join } from 'node:path';
+import chalk from 'chalk';
+import { getActiveModel, activeModelEnv } from '../config/active.js';
+import { findBun, firstExisting, onPath, spawnInherit, notFound, projectRoot } from '../external.js';
+
 const COMPOSE_STAGES = [
-  { name: 'brainstorm', emoji: '💡', desc: 'Requirements analysis & specification' },
-  { name: 'spec',       emoji: '📝', desc: 'Technical specification & task breakdown' },
-  { name: 'implement',  emoji: '🔨', desc: 'Write code & add tests' },
-  { name: 'review',     emoji: '👁️',  desc: 'Code review & quality check' },
+  { name: 'brainstorm', emoji: '💡', desc: 'Gereksinim analizi & spesifikasyon' },
+  { name: 'spec',       emoji: '📝', desc: 'Teknik spesifikasyon & görev dökümü' },
+  { name: 'implement',  emoji: '🔨', desc: 'Kod yaz & test ekle' },
+  { name: 'review',     emoji: '👁️',  desc: 'Kod incelemesi & kalite kontrol' },
   { name: 'tdd',        emoji: '🧪', desc: 'Test-driven development' },
-  { name: 'debug',      emoji: '🐛', desc: 'Debug & fix' },
+  { name: 'debug',      emoji: '🐛', desc: 'Hata ayıkla & düzelt' },
   { name: 'verify',     emoji: '✅', desc: 'Typecheck, test, lint, build' },
-  { name: 'merge',      emoji: '🔀', desc: 'Merge changes & cleanup' },
+  { name: 'merge',      emoji: '🔀', desc: 'Değişiklikleri birleştir & temizle' },
 ];
 
-export async function composeCommand(
-  subcommand: string,
-  args: string[],
-): Promise<void> {
+/** İndirilen MiMo Code dizinini bul. */
+function findMimoDir(): string | null {
+  return firstExisting(
+    join(projectRoot(), 'MiMo-Code-main'),
+    join(projectRoot(), 'core', 'MiMo-Code-main'),
+  );
+}
+
+/** Gerçek MiMo'yu nasıl başlatacağımıza karar ver: PATH binary → bundled (Bun). */
+function resolveLauncher(): { cmd: string; baseArgs: string[]; cwd?: string } | null {
+  // 1. Kurulu `mimo` (npm i -g @mimo-ai/cli)
+  if (onPath('mimo')) return { cmd: 'mimo', baseArgs: [] };
+
+  // 2. Bundled kaynak: MiMo'nun kendi dev çağrısını birebir aynala.
+  const dir = findMimoDir();
+  const bun = findBun();
+  if (dir && bun && firstExisting(join(dir, 'packages', 'opencode', 'script', 'dev.ts'))) {
+    return { cmd: bun, baseArgs: ['run', '--cwd', 'packages/opencode', 'script/dev.ts'], cwd: dir };
+  }
+  return null;
+}
+
+export async function composeCommand(subcommand: string, args: string[]): Promise<void> {
   switch (subcommand) {
     case 'start':
       await handleComposeStart(args);
@@ -28,7 +58,7 @@ export async function composeCommand(
       handleComposeList();
       break;
     case 'resume':
-      await handleComposeResume(args);
+      await launchMimo([], 'compose');
       break;
     default:
       showComposeHelp();
@@ -36,87 +66,65 @@ export async function composeCommand(
 }
 
 async function handleComposeStart(args: string[]): Promise<void> {
-  const description = args.join(' ');
+  const description = args.join(' ').trim();
   if (!description) {
-    console.log('❌ Please describe what you want to build.');
-    console.log('   Usage: caphlon compose start <description>\n');
+    console.log('❌ Ne inşa etmek istediğini yaz.  Kullanım: caphlon compose start <açıklama>\n');
     return;
   }
 
-  console.log('\n╔══════════════════════════════════════════╗');
-  console.log('║     Caphlon Compose — Starting Workflow   ║');
-  console.log('╚══════════════════════════════════════════╝\n');
-  console.log(`📋 Task: ${description}\n`);
-
-  // Show all stages
+  console.log(chalk.bold('\n╔══════════════════════════════════════════╗'));
+  console.log(chalk.bold('║     Caphlon Compose — MiMo Code akışı     ║'));
+  console.log(chalk.bold('╚══════════════════════════════════════════╝\n'));
+  console.log(`📋 Görev: ${chalk.cyan(description)}\n`);
   for (let i = 0; i < COMPOSE_STAGES.length; i++) {
-    const stage = COMPOSE_STAGES[i];
-    console.log(`  ${stage.emoji} Stage ${i + 1}: ${stage.name}`);
-    console.log(`     ${stage.desc}`);
+    const s = COMPOSE_STAGES[i];
+    console.log(`  ${s.emoji} ${i + 1}. ${s.name} — ${chalk.gray(s.desc)}`);
+  }
+  console.log('');
+
+  await launchMimo(['--prompt', description], 'compose');
+}
+
+/** Gerçek MiMo'yu compose ajanıyla, bağlı modelle başlat. */
+async function launchMimo(extraArgs: string[], agent: string): Promise<void> {
+  const active = getActiveModel();
+  if (!active) {
+    console.error(chalk.red('✖ Aktif model yok. Önce bir model bağla:  caphlon connect'));
+    process.exitCode = 1;
+    return;
   }
 
-  console.log('\n📝 Creating task list...');
-
-  // Create .caphlon/compose/ directory
-  const { mkdirSync, writeFileSync, existsSync } = await import('node:fs');
-  const { join } = await import('node:path');
-  const composeDir = join(process.cwd(), '.caphlon', 'compose');
-
-  if (!existsSync(composeDir)) {
-    mkdirSync(composeDir, { recursive: true });
+  const launcher = resolveLauncher();
+  if (!launcher) {
+    notFound('MiMo Code', [
+      'npm install -g @mimo-ai/cli',
+      'veya bundled sürüm için Bun kur (https://bun.sh) + MiMo-Code-main bağımlılıklarını yükle',
+    ]);
+    return;
   }
 
-  const taskFile = join(composeDir, `task-${Date.now()}.json`);
-  writeFileSync(taskFile, JSON.stringify({
-    description,
-    createdAt: new Date().toISOString(),
-    stages: COMPOSE_STAGES.map((s, i) => ({
-      ...s,
-      order: i + 1,
-      status: 'pending',
-    })),
-  }, null, 2));
+  const args = [...launcher.baseArgs, '--agent', agent, ...extraArgs];
+  console.log(chalk.bold(`🐙 MiMo Compose — ${chalk.cyan(active.provider.id + '/' + active.model)}`));
+  console.log(chalk.gray('   caphlon connect ile bağlı model kullanılıyor\n'));
 
-  console.log(`   Task saved: ${taskFile}`);
-  console.log('\n✅ Compose workflow initialized!');
-  console.log('   Run each stage: caphlon compose <stage>');
-  console.log('   Example: caphlon compose brainstorm\n');
+  // Bağlı modeli MiMo'nun beklediği ortam değişkenleriyle (ANTHROPIC_API_KEY vb.) geçir.
+  spawnInherit(launcher.cmd, args, activeModelEnv(), launcher.cwd);
 }
 
 function handleComposeList(): void {
-  console.log('\n📋 Caphlon Compose — Available Stages:\n');
+  console.log('\n📋 Caphlon Compose — Aşamalar (MiMo Code):\n');
   for (let i = 0; i < COMPOSE_STAGES.length; i++) {
-    const stage = COMPOSE_STAGES[i];
-    console.log(`  ${i + 1}. ${stage.emoji} ${stage.name}`);
-    console.log(`     ${stage.desc}`);
+    const s = COMPOSE_STAGES[i];
+    console.log(`  ${i + 1}. ${s.emoji} ${s.name} — ${chalk.gray(s.desc)}`);
   }
-  console.log('\nUsage:');
-  console.log('  caphlon compose start <description>   Start a new compose workflow');
-  console.log('  caphlon compose list                   List available stages');
-  console.log('  caphlon compose resume <id>            Resume a saved workflow\n');
-}
-
-async function handleComposeResume(args: string[]): Promise<void> {
-  const taskId = args[0];
-  if (!taskId) {
-    console.log('❌ Please specify a task ID.');
-    console.log('   Tasks are in .caphlon/compose/\n');
-    return;
-  }
-  console.log(`\n📂 Resuming compose task: ${taskId}\n`);
-  console.log('   Caphlon Compose is ready for the next stage.');
-  console.log('   Run: caphlon compose brainstorm\n');
+  console.log('\nKullanım:');
+  console.log('  caphlon compose start <açıklama>   Yeni compose akışı başlat');
+  console.log('  caphlon compose resume              MiMo oturum seçiciyle devam et\n');
 }
 
 function showComposeHelp(): void {
-  console.log('\n📋 Caphlon Compose Commands:');
-  console.log('  caphlon compose start <description>   Start a new compose workflow');
-  console.log('  caphlon compose list                   List available stages');
-  console.log('  caphlon compose resume <id>            Resume a saved workflow');
-  console.log('');
-  console.log('Stages:');
-  for (const stage of COMPOSE_STAGES) {
-    console.log(`  ${stage.emoji} ${stage.name} — ${stage.desc}`);
-  }
-  console.log('');
+  console.log('\n📋 Caphlon Compose (MiMo Code) komutları:');
+  console.log('  caphlon compose start <açıklama>   Compose ajanını bu görevle başlat');
+  console.log('  caphlon compose list                Aşamaları göster');
+  console.log("  caphlon compose resume              MiMo'yu aç (oturumla devam)\n");
 }

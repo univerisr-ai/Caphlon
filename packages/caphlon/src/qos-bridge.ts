@@ -9,6 +9,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { activeModelEnv } from './config/active.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,6 +103,8 @@ export async function startQos(port = 3000, dashboardPort = 3001): Promise<QosIn
     env: {
       ...process.env,
       CAPHLON_MODE: '1',
+      // Inject the active model + API key bound via `caphlon connect`
+      ...activeModelEnv(),
     },
   });
 

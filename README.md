@@ -67,6 +67,10 @@ npm install -g caphlon && caph dev
 ## CLI Komutları
 
 ```bash
+caphlon connect      # Model sağlayıcısı + API key bağla (OpenCode tarzı)
+caphlon model        # Aktif modeli göster / listele / değiştir
+caphlon ui           # OpenCode arayüzünü başlat (birebir OpenCode TUI)
+caphlon code         # AI çift-programlama (gerçek Aider ile)
 caphlon dev          # Agent + dashboard başlat
 caphlon run "..."    # Task çalıştır
 caphlon design       # Tasarım pipeline'ı
@@ -76,6 +80,10 @@ caphlon doctor       # Tanılama
 caphlon init         # Proje başlat
 ```
 
+> Tüm bileşenler tek modele bağlanır: `caphlon connect` ile bir kez bağla,
+> Qualixar OS / Aider / orkestratör aynı modeli kullansın. Detay:
+> [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md)
+
 ## Bileşenler
 
 | Katman | Araç | Lisans | Doküman |
@@ -84,6 +92,8 @@ caphlon init         # Proje başlat
 | Orkestratör | [Qualixar OS](https://github.com/qualixar/qualixar-os) | FSL-1.1-ALv2 | — |
 | Design/UI Pipeline | [Open Design](https://github.com/nexu-io/open-design) (entegre) | Apache 2.0 | [docs/integration/OPEN_DESIGN_INTEGRATION.md](docs/integration/OPEN_DESIGN_INTEGRATION.md) |
 | Memory/Workflow | [MiMo Code](https://github.com/XiaomiMiMo/MiMo-Code) (entegre) | MIT | [docs/integration/MIMO_CODE_INTEGRATION.md](docs/integration/MIMO_CODE_INTEGRATION.md) |
+| Pair-Programming | [Aider](https://github.com/Aider-AI/aider) (entegre) | Apache 2.0 | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
+| Arayüz (TUI) | [OpenCode](https://github.com/sst/opencode) (entegre) | MIT | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
 | VBS Ajan | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | MIT | — |
 | Federated | [Flower](https://github.com/flwrlabs/flower) | Apache 2.0 | — |
 | Fine-Tuning | SmolLM + LoRA (TRL/PEFT) | Apache 2.0 | — |

@@ -2,10 +2,11 @@
  * caphlon doctor — Diagnostics and troubleshooting
  */
 
-import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { findQosDir, findOpenDesignDir, findProjectRoot, checkOpenDesign, getStatus } from '../qos-bridge.js';
+import { findQosDir, findOpenDesignDir, findProjectRoot, checkOpenDesign } from '../qos-bridge.js';
+import { onPath, findBun, findPython, firstExisting, projectRoot as root } from '../external.js';
+import { tokenlessAvailable } from './tokenless.js';
 
 export async function doctorCommand(): Promise<void> {
   console.log('\n╔══════════════════════════════════════════╗');
@@ -77,6 +78,49 @@ export async function doctorCommand(): Promise<void> {
     status: hasMemory ? '✅' : 'ℹ️',
     detail: hasMemory ? 'MEMORY.md found' : 'No MEMORY.md',
   });
+
+  // -- Bileşen araçları (gerçek, wire edilmiş) -----------------------------
+  const r = root();
+  const bundled = (...p: string[]) => firstExisting(...p) !== null;
+  const tools: { name: string; ready: boolean; how: string }[] = [
+    {
+      name: 'OpenCode TUI (caphlon ui)',
+      ready: onPath('opencode') || (!!findBun() && bundled(join(r, 'core', 'opencode-main', 'packages', 'opencode', 'src', 'index.ts'))),
+      how: 'bundled (bun) / opencode',
+    },
+    {
+      name: 'Aider (caphlon code)',
+      ready: onPath('aider') || (!!findPython() && bundled(join(r, 'core', 'aider-main', 'aider', '__init__.py'))),
+      how: 'pip install aider-chat',
+    },
+    {
+      name: 'MiMo Code (caphlon compose)',
+      ready: onPath('mimo') || (!!findBun() && bundled(join(r, 'MiMo-Code-main', 'packages', 'opencode', 'script', 'dev.ts'))),
+      how: 'npm i -g @mimo-ai/cli',
+    },
+    {
+      name: 'Hermes (caphlon hermes)',
+      ready: onPath('hermes') || bundled(join(r, 'core', 'hermes-agent-main'), join(r, 'hermes-agent-main')),
+      how: 'hermes-agent.nousresearch.com/install.sh',
+    },
+    {
+      name: 'tokenless (caphlon tokenless)',
+      ready: tokenlessAvailable(),
+      how: 'cargo install tokenless',
+    },
+    {
+      name: 'Flower (caphlon flower)',
+      ready: onPath('flwr') || bundled(join(r, 'core', 'flower-main', 'framework'), join(r, 'flower-main', 'framework')),
+      how: 'pip install flwr',
+    },
+  ];
+  for (const t of tools) {
+    results.push({
+      check: t.name,
+      status: t.ready ? '✅' : 'ℹ️',
+      detail: t.ready ? 'hazır' : `kurulu değil → ${t.how}`,
+    });
+  }
 
   // Print results
   for (const r of results) {
