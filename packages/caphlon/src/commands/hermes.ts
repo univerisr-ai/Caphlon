@@ -14,9 +14,47 @@
 
 import { join } from 'node:path';
 import chalk from 'chalk';
-import { getActiveModel, activeModelEnv } from '../config/active.js';
+import { getActiveModel, activeModelEnv, type ActiveModel } from '../config/active.js';
 import { findPython, firstExisting, onPath, spawnInherit, notFound, projectRoot } from '../external.js';
 import { spawnSync } from 'node:child_process';
+
+/**
+ * Bağlı modeli Hermes'in beklediği ortam değişkenlerine çevir (setup sihirbazı
+ * atlanır). Hermes provider adları farklıdır (openai → "openai-api", google →
+ * "gemini"); native olmayan sağlayıcılar OpenAI-uyumlu olarak bağlanır.
+ */
+function hermesModelEnv(active: ActiveModel): Record<string, string> {
+  const env: Record<string, string> = { HERMES_INFERENCE_MODEL: active.model };
+  const key = active.apiKey ?? '';
+  switch (active.provider.id) {
+    case 'anthropic':
+      env.HERMES_INFERENCE_PROVIDER = 'anthropic';
+      if (key) env.ANTHROPIC_API_KEY = key;
+      break;
+    case 'openai':
+      env.HERMES_INFERENCE_PROVIDER = 'openai-api';
+      if (key) env.OPENAI_API_KEY = key;
+      break;
+    case 'openrouter':
+      env.HERMES_INFERENCE_PROVIDER = 'openrouter';
+      if (key) env.OPENROUTER_API_KEY = key;
+      break;
+    case 'google':
+      env.HERMES_INFERENCE_PROVIDER = 'gemini';
+      if (key) {
+        env.GOOGLE_API_KEY = key;
+        env.GEMINI_API_KEY = key;
+      }
+      break;
+    default:
+      // groq, deepseek, xai, together, ollama → OpenAI-uyumlu endpoint
+      env.HERMES_INFERENCE_PROVIDER = 'openai-api';
+      if (key) env.OPENAI_API_KEY = key;
+      env.OPENAI_BASE_URL = active.baseUrl;
+      break;
+  }
+  return env;
+}
 
 function findHermesDir(): string | null {
   return firstExisting(
@@ -64,8 +102,12 @@ export async function hermesCommand(args: string[]): Promise<void> {
   }
 
   console.log(chalk.bold(`\n🪽 Hermes Agent — ${chalk.cyan(active.provider.id + '/' + active.model)}`));
-  console.log(chalk.gray('   caphlon connect ile bağlı model kullanılıyor\n'));
+  console.log(chalk.gray('   caphlon connect modeli Hermes\'e geçiriliyor (setup sihirbazı atlanır)\n'));
 
-  // Bağlı sağlayıcı anahtarını (ANTHROPIC/OPENAI/OPENROUTER...) Hermes'e geçir.
-  spawnInherit(launcher.cmd, [...launcher.baseArgs, ...args], { ...activeModelEnv(), ...launcher.env });
+  // Bağlı modeli Hermes'in env şemasına çevir + genel anahtarları da ekle.
+  spawnInherit(launcher.cmd, [...launcher.baseArgs, ...args], {
+    ...activeModelEnv(),
+    ...hermesModelEnv(active),
+    ...launcher.env,
+  });
 }

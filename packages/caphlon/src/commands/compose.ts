@@ -13,7 +13,7 @@
 
 import { join } from 'node:path';
 import chalk from 'chalk';
-import { getActiveModel, activeModelEnv } from '../config/active.js';
+import { getActiveModel, activeModelEnv, opencodeModelString } from '../config/active.js';
 import { findBun, firstExisting, onPath, spawnInherit, notFound, projectRoot } from '../external.js';
 
 const COMPOSE_STAGES = [
@@ -103,11 +103,14 @@ async function launchMimo(extraArgs: string[], agent: string): Promise<void> {
     return;
   }
 
-  const args = [...launcher.baseArgs, '--agent', agent, ...extraArgs];
-  console.log(chalk.bold(`🐙 MiMo Compose — ${chalk.cyan(active.provider.id + '/' + active.model)}`));
+  // MiMo bir OpenCode fork'u: modeli hem --model bayrağıyla (provider/model) hem
+  // de ortam değişkenleriyle (ANTHROPIC_API_KEY vb.) geçir → manuel onboarding yok.
+  // --trust workspace güven sorusunu atlar (akışı kesmesin).
+  const modelStr = opencodeModelString(active);
+  const args = [...launcher.baseArgs, '--model', modelStr, '--agent', agent, '--trust', ...extraArgs];
+  console.log(chalk.bold(`🐙 MiMo Compose — ${chalk.cyan(modelStr)}`));
   console.log(chalk.gray('   caphlon connect ile bağlı model kullanılıyor\n'));
 
-  // Bağlı modeli MiMo'nun beklediği ortam değişkenleriyle (ANTHROPIC_API_KEY vb.) geçir.
   spawnInherit(launcher.cmd, args, activeModelEnv(), launcher.cwd);
 }
 
