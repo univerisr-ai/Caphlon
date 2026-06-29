@@ -1,3 +1,36 @@
+diff --git a/packages/opencode/src/provider/transform.ts b/packages/opencode/src/provider/transform.ts
+index e459380..91672b7 100644
+--- a/packages/opencode/src/provider/transform.ts
++++ b/packages/opencode/src/provider/transform.ts
+@@ -186,6 +186,28 @@ function normalizeMessages(
+       .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
+   }
+ 
++  // Cohere rejects messages with empty content ("must have non-empty content or
++  // tool calls") - same treatment as Anthropic/Bedrock: drop empty string
++  // messages and empty text/reasoning parts (e.g. left by an interrupted turn).
++  if (model.api.npm === "@ai-sdk/cohere" || model.providerID === "cohere") {
++    msgs = msgs
++      .map((msg) => {
++        if (typeof msg.content === "string") {
++          if (msg.content === "") return undefined
++          return msg
++        }
++        if (!Array.isArray(msg.content)) return msg
++        const filtered = msg.content.filter((part) => {
++          if (part.type === "text") return part.text !== ""
++          if (part.type === "reasoning") return part.text.trim().length > 0
++          return true
++        })
++        if (filtered.length === 0) return undefined
++        return { ...msg, content: filtered }
++      })
++      .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
++  }
++
+   if (model.api.id.includes("claude")) {
+     const scrub = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, "_")
+     msgs = msgs.map((msg) => {
 diff --git a/packages/opencode/src/session/prompt/anthropic.txt b/packages/opencode/src/session/prompt/anthropic.txt
 index 21d9c0e..4472bf7 100644
 --- a/packages/opencode/src/session/prompt/anthropic.txt
