@@ -31,13 +31,19 @@ class HiveFedTest(unittest.TestCase):
         self.assertTrue(r["merged"])
         self.assertEqual(r["dropped"], [2])   # zehir (3.) elendi
 
-    def test_pull_after_publish(self):
+    def test_pull_failsafe_until_verified(self):
+        """Fail-safe: birleştirilen adapter DOĞRULANANA kadar çekilemez."""
         for vid, d in [("n1",{"w":[2.0]}),("n2",{"w":[2.0]}),("n3",{"w":[2.0]})]:
             node._post(self.base, "/delta", {"vbs_id": vid, "delta": d})
         import tempfile, os, json
         dest = os.path.join(tempfile.mkdtemp(), "adapter.json")
-        r = node.pull_adapter(self.base, dest)
-        self.assertTrue(r["ok"])
+        # Doğrulanmadan: pull başarısız (kötü adapter sessizce yayılmaz).
+        self.assertFalse(node.pull_adapter(self.base, dest)["ok"])
+        # Bağımsız eval onayı geldikten sonra: pull çalışır.
+        v = node._post(self.base, "/adapter/verify", {"version": 1, "eval_score": 0.9})
+        self.assertTrue(v["verified"])
+        r2 = node.pull_adapter(self.base, dest)
+        self.assertTrue(r2["ok"])
         self.assertEqual(json.load(open(dest))["w"], [2.0])
 
     def test_no_adapter_yet_404(self):

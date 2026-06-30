@@ -48,8 +48,11 @@ class AdapterRegistry:
         self.manifest_path.write_text(json.dumps(m, indent=2, ensure_ascii=False))
 
     # ---- publish / fetch ------------------------------------------------
-    def publish(self, vectors: dict, score: float, created: Optional[float] = None) -> dict:
-        """Yeni sürüm yayınla; latest'i ilerlet. `created` testlerde sabitlenebilir."""
+    def publish(self, vectors: dict, score: float, created: Optional[float] = None,
+                verified: bool = False) -> dict:
+        """Yeni sürüm yayınla. `verified=False` (varsayılan) → adapter saklanır ama
+        düğümlere DAĞITILMAZ; ancak bağımsız bir eval onayladıktan sonra (verify)
+        `latest_verified` olur. Bu fail-safe: kötü adapter sessizce yayılamaz."""
         m = self._load_manifest()
         version = int(m.get("latest", 0)) + 1
         fname = f"adapter-v{version}.json"
@@ -59,11 +62,43 @@ class AdapterRegistry:
             "score": score,
             "path": fname,
             "created": created if created is not None else time.time(),
+            "verified": bool(verified),
         }
         m["versions"].append(entry)
         m["latest"] = version
+        if verified:
+            m["latest_verified"] = version
         self._save_manifest(m)
         return entry
+
+    def verify(self, version: int, eval_score: Optional[float] = None) -> bool:
+        """Bir sürümü bağımsız eval sonrası DOĞRULANMIŞ işaretle; dağıtıma açılır."""
+        m = self._load_manifest()
+        for v in m.get("versions", []):
+            if v["version"] == version:
+                v["verified"] = True
+                if eval_score is not None:
+                    v["eval_score"] = eval_score
+                # latest_verified yalnızca ileri gider (regresyon koruması).
+                if version > int(m.get("latest_verified", 0)):
+                    m["latest_verified"] = version
+                self._save_manifest(m)
+                return True
+        return False
+
+    def latest_verified_meta(self) -> Optional[dict]:
+        m = self._load_manifest()
+        lv = int(m.get("latest_verified", 0))
+        if not lv:
+            return None
+        for v in m["versions"]:
+            if v["version"] == lv:
+                return v
+        return None
+
+    def load_latest_verified(self) -> Optional[dict]:
+        meta = self.latest_verified_meta()
+        return self.load_version(meta["version"]) if meta else None
 
     def latest_meta(self) -> Optional[dict]:
         m = self._load_manifest()
@@ -99,8 +134,12 @@ class AdapterRegistry:
         m = self._load_manifest()
         return {
             "latest": m.get("latest", 0),
+            "latest_verified": m.get("latest_verified", 0),
             "count": len(m.get("versions", [])),
-            "versions": [{"version": v["version"], "score": round(v["score"], 4)} for v in m.get("versions", [])],
+            "versions": [
+                {"version": v["version"], "score": round(v["score"], 4), "verified": v.get("verified", False)}
+                for v in m.get("versions", [])
+            ],
         }
 
 

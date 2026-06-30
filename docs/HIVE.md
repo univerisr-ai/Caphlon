@@ -82,8 +82,32 @@ LoRA ağırlık farkı paylaşılır. Açık opt-in. (Benimsenmenin = ölçeğin
   - `model_serve.py` adapter merge'i (pull edilen adapter'ı zayıf base'e yükle).
   - Katkı panosu (kim ne kadar güçlendirdi), diferansiyel gizlilik gürültüsü, oto-pull zamanlayıcı.
 
+## İddia kanıtlanabilir mi? — ÖLÇ, varsayma
+
+`caphlon hive eval` bir **tartı**dır: aynı bağlı modelle SOLO (tek çağrı) vs
+HIVE (ensemble+konsensüs+önbellek) doğruluğunu ölçer ve **Δ**'yı raporlar.
+
+- Δ>0 → kovan gerçekten yardımcı oldu (o görev/model için).
+- Δ≈0/<0 → olmadı; bunu dürüstçe öğreniriz.
+
+Dürüstlük testleri (`test_hive_eval`): hatalar **bağımsız** olduğunda ensemble
+doğruluğu artırır; **korelasyonlu** (hep aynı yanlış) olduğunda **artırmaz**
+(Δ=0). Yani harness "her zaman kovan kazanır" demez — gerçeği söyler.
+
+> Asıl risk: aynı zayıf modeli koşan düğümlerin hataları korelasyonludur →
+> konsensüs beklenenden az kazandırır. Bu yüzden **ölçmeden açma.**
+
+## Federated fail-safe (kötü adapter sessizce yayılmaz)
+
+Koordinatör model çalıştıramadığı için birleştirilen adapter **doğrulanmamış**
+yayınlanır; düğümler `pull` ile **yalnızca DOĞRULANMIŞ** adapter çeker. Bağımsız
+bir eval `/adapter/verify` ile onaylayana dek dağıtılmaz → self-distillation
+çökme riskine karşı koruma. (Gerçek eval harness'ı modelle koşmak P2'de.)
+
 ## Dürüst sınır
 
-Tek 2GB model, ağırlıkla Opus olmaz. Ama (1) konsensüs + (2) ortak hafıza
-**anında**, (3) federated LoRA **biriken** kazanç verir; üçü birlikte, çok
-düğümle güçlü-model kalitesine *yaklaşır*. İddia "eşit" değil, "yaklaşır".
+Tek 2GB model, ağırlıkla Opus olmaz. (1) konsensüs + (2) ortak hafıza **anında**,
+(3) federated LoRA **biriken** kazanç hedefler; üçü birlikte, çok ve **çeşitli**
+düğümle güçlü-model kalitesine *yaklaşır* — "eşit" değil, "yaklaşır". Federated
+LoRA en kırılgan halka: kötü veriyle modeli **bozabilir** de → fail-safe + eval
+şart. Sayı için `caphlon hive eval`.

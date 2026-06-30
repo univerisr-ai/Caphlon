@@ -161,10 +161,12 @@ def make_handler(state: HiveState):
                 q = state.engine.honeypot.get_question(idx)
                 return self._send(200, {"question_idx": idx, "question": q["q"]})
             if path == "/adapter":
-                vecs = state.registry.load_latest()
+                # Fail-safe: düğümler YALNIZCA doğrulanmış adapter çeker. Doğrulanmamış
+                # (eval'den geçmemiş) bir adapter sessizce dağıtılmaz.
+                vecs = state.registry.load_latest_verified()
                 if vecs is None:
-                    return self._send(404, {"error": "henüz yayınlanmış adapter yok"})
-                return self._send(200, {"meta": state.registry.latest_meta(), "vectors": vecs})
+                    return self._send(404, {"error": "henüz doğrulanmış adapter yok (fail-safe)"})
+                return self._send(200, {"meta": state.registry.latest_verified_meta(), "vectors": vecs})
             if path == "/adapter/meta":
                 return self._send(200, state.registry.info())
             if path == "/stats":
@@ -228,6 +230,15 @@ def make_handler(state: HiveState):
                 if not vbs or not isinstance(vectors, dict) or not vectors:
                     return self._send(400, {"error": "vbs_id ve delta (dict) zorunlu"})
                 return self._send(200, state.submit_delta(vbs, vectors))
+
+            if path == "/adapter/verify":
+                # Bağımsız bir eval süreci bir sürümü onaylayınca dağıtıma açar.
+                version = int(data.get("version", 0))
+                score = data.get("eval_score")
+                ok = state.registry.verify(version, float(score) if score is not None else None)
+                return self._send(200 if ok else 404,
+                                  {"verified": ok, "version": version,
+                                   "latest_verified": state.registry.info()["latest_verified"]})
 
             return self._send(404, {"error": "yol yok"})
 

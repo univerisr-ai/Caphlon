@@ -28,6 +28,7 @@ const SCRIPTS: Record<string, string> = {
   pull: 'hive_node.py',
   'submit-delta': 'hive_node.py',
   solve: 'local_ensemble.py',
+  eval: 'hive_eval.py',
   train: 'trajectory_capture.py',
   demo: 'hive_demo.py',
 };
@@ -52,6 +53,7 @@ export async function hiveCommand(sub: string | undefined, args: string[]): Prom
     console.log(`caphlon hive — Kovan Zekası
 
   solve   "<soru>" [--samples 5]         Bağlı modeli N kez örnekle → konsensüs (tek makinede güç)
+  eval    [--samples 5] [--bench f]      ÖLÇ: solo-model vs kovan doğruluğu (Δ) — iddiayı tart
   serve   [--port 8777] [--quorum 3]     Koordinatörü başlat
   join    --id <ad> [--model-cmd "..."]  Düğüm olarak katıl
   ask     "<soru>" [--server URL]        Kovana sor (konsensüs)

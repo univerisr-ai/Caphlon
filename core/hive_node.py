@@ -24,6 +24,7 @@ import shlex
 import subprocess
 import time
 import urllib.request
+import urllib.error
 from typing import Callable, Optional
 
 
@@ -191,8 +192,13 @@ def submit_delta(base: str, vbs_id: str, delta_path: str) -> dict:
 
 
 def pull_adapter(base: str, dest: str) -> dict:
-    """Yayınlanmış en güncel global adapter'ı indir ve `dest`'e yaz."""
-    data = _get(base, "/adapter")
+    """Yayınlanmış+DOĞRULANMIŞ en güncel global adapter'ı indir ve `dest`'e yaz.
+
+    Doğrulanmış adapter yoksa koordinatör 404 döner (fail-safe) → {ok:false}."""
+    try:
+        data = _get(base, "/adapter")
+    except urllib.error.HTTPError as e:
+        return {"ok": False, "reason": f"doğrulanmış adapter yok ({e.code})"}
     vecs = data.get("vectors")
     if vecs is None:
         return {"ok": False, "reason": "henüz adapter yok"}
