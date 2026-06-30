@@ -367,11 +367,18 @@ export async function runTask(prompt: string, options: RunTaskOptions = {}): Pro
       return { success: false, output: '', error: `API hatası: ${response.status}` };
     }
 
-    const data = (await response.json()) as Record<string, unknown>;
-    return {
-      success: true,
-      output: extractOutput(data),
-    };
+    const created = (await response.json()) as Record<string, unknown>;
+    const taskId = typeof created.taskId === 'string' ? created.taskId : undefined;
+
+    // qos görevi ASYNC çalıştırır ve hemen {status:'pending'} döner. Gerçek cevabı
+    // almak için görev bitene kadar GET /api/tasks/:id ile poll etmeliyiz — aksi
+    // halde "pending" yanıtı kullanıcıya gerçek sonuç gibi gösterilirdi (eski bug).
+    if (taskId && typeof target.port === 'number') {
+      const final = await pollTask(target.port, taskId, 120_000);
+      if (final) return final;
+      return { success: false, output: '', error: 'Görev zaman aşımına uğradı (sonuç gelmedi).' };
+    }
+    return { success: true, output: extractOutput(created) };
   } catch (err) {
     return {
       success: false,
@@ -391,6 +398,60 @@ function extractOutput(data: Record<string, unknown>): string {
     if (typeof v === 'string' && v.trim()) return v;
   }
   return JSON.stringify(data, null, 2);
+}
+
+const TERMINAL_STATUS = new Set(['completed', 'failed', 'cancelled', 'pending_human_review']);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Görev bitene kadar GET /api/tasks/:id ile poll et; gerçek çıktıyı döndür.
+ * Zaman aşımında null döner. Geçici ağ hataları yutulur (tekrar denenir).
+ */
+async function pollTask(port: number, taskId: string, timeoutMs: number): Promise<TaskResult | null> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await sleep(1200);
+    let task: Record<string, unknown> | undefined;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/tasks/${taskId}`, {
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!res.ok) continue;
+      const body = (await res.json()) as { task?: Record<string, unknown> };
+      task = body.task;
+    } catch {
+      continue; // geçici ağ/sunucu hatası — tekrar dene
+    }
+    if (!task) continue;
+    const status = String(task.status ?? '');
+    if (!TERMINAL_STATUS.has(status)) continue; // pending/running → beklemeye devam
+
+    const answer = extractTaskOutput(task);
+    if (status === 'failed' || status === 'cancelled') {
+      return { success: false, output: '', error: answer || `görev ${status}` };
+    }
+    return { success: true, output: answer || `(görev durumu: ${status})` }; // completed | pending_human_review
+  }
+  return null; // zaman aşımı
+}
+
+/** task.result (qos TaskResult JSON) veya task alanlarından okunur cevabı çıkar. */
+function extractTaskOutput(task: Record<string, unknown>): string {
+  const raw = task.result;
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof parsed.output === 'string' && parsed.output.trim()) return parsed.output;
+      if (typeof parsed.error === 'string' && parsed.error.trim()) return parsed.error;
+      return extractOutput(parsed);
+    } catch {
+      return raw; // JSON değil, düz metin
+    }
+  }
+  return extractOutput(task);
 }
 
 /**

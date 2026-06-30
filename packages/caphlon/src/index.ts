@@ -77,7 +77,8 @@ export async function run(): Promise<void> {
     .argument('<prompt>', 'Task description')
     .option('--no-autostart', 'Çalışan bir sunucu yoksa otomatik başlatma')
     .action(async (prompt: string, options: { autostart?: boolean }) => {
-      console.log(`\n🧠 Running task: ${prompt}\n`);
+      console.log(`\n🧠 Running task: ${prompt}`);
+      console.log('   ⏳ görev çalışıyor, sonuç bekleniyor…\n');
       const result = await runTask(prompt, { autostart: options.autostart !== false });
       if (result.success) {
         console.log('✅ Task completed!\n');
