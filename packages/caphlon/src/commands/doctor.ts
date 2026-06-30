@@ -220,8 +220,19 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
     },
     {
       name: 'Flower (caphlon flower)',
-      ready: onPath('flwr') || bundled(join(r, 'core', 'flower-main', 'framework'), join(r, 'flower-main', 'framework')),
-      how: 'pip install flwr',
+      // Dizin var demek "çalışır" demek DEĞİL: flwr gerçekten import edilebilmeli
+      // (caphlon flower ile aynı kontrol). Aksi halde doctor yeşil ama komut patlar.
+      ready: ((): boolean => {
+        if (onPath('flwr')) return true;
+        const dir = firstExisting(join(r, 'core', 'flower-main', 'framework'), join(r, 'flower-main', 'framework'));
+        const py = findPython();
+        if (!dir || !py) return false;
+        return spawnSync(py, ['-c', 'import flwr.cli.app'], {
+          stdio: 'ignore',
+          env: { ...process.env, PYTHONPATH: dir },
+        }).status === 0;
+      })(),
+      how: 'pip install flwr  (veya: cd core/flower-main/framework && pip install -e .)',
     },
   ];
   for (const t of tools) {
