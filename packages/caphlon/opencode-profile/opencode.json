@@ -2,6 +2,20 @@
   "$schema": "https://opencode.ai/config.json",
   "theme": "caphlon",
   "instructions": [
-    "CAPHLON.md"
-  ]
+    "CAPHLON.md",
+    "SKILLS_INDEX.md"
+  ],
+  "mcp": {
+    "opendesign": {
+      "type": "local",
+      "command": [
+        "node",
+        "/Users/demir/Desktop/Caphlon/open-design-main/apps/daemon/bin/od.mjs",
+        "mcp",
+        "live-artifacts"
+      ],
+      "enabled": true,
+      "timeout": 60000
+    }
+  }
 }

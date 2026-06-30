@@ -16,10 +16,105 @@ import { join, resolve } from 'node:path';
 import chalk from 'chalk';
 import { getActiveModel, opencodeModelString } from '../config/active.js';
 import { tokenlessBinaryPath } from './tokenless.js';
+import { writeSkillsIndex, listSkills } from '../config/skills.js';
+
+/**
+ * Skill katmanını TUI'ye bağla: skill indeksini profile yaz ve opencode.json
+ * `instructions`'a ekle (yoksa). Böylece düz `caphlon` da skill'leri görür ve
+ * model gerektiğinde tam SKILL.md'yi okur. Skill sayısını döndürür.
+ */
+export function reconcileSkillsInstruction(profile: string): number {
+  const cfgPath = join(profile, 'opencode.json');
+  if (!existsSync(cfgPath)) return 0;
+  const indexPath = writeSkillsIndex(profile); // profile/SKILLS_INDEX.md (skill varsa)
+  let cfg: Record<string, any>;
+  try {
+    cfg = JSON.parse(readFileSync(cfgPath, 'utf8')) as Record<string, any>;
+  } catch {
+    return 0;
+  }
+  const before = JSON.stringify(cfg);
+  const list: string[] = Array.isArray(cfg.instructions) ? cfg.instructions : [];
+  const has = list.includes('SKILLS_INDEX.md');
+  if (indexPath && !has) list.push('SKILLS_INDEX.md');
+  else if (!indexPath && has) list.splice(list.indexOf('SKILLS_INDEX.md'), 1);
+  cfg.instructions = list;
+  if (JSON.stringify(cfg) !== before) {
+    writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
+  }
+  return indexPath ? listSkills().length : 0;
+}
 
 /** core/opencode-main relative to packages/caphlon/dist/commands → project root */
 function opencodeRepoDir(): string {
   return resolve(import.meta.dirname, '..', '..', '..', '..', 'core', 'opencode-main');
+}
+
+/** Proje kökü (dist/commands → 4 yukarı) */
+function projRoot(): string {
+  return resolve(import.meta.dirname, '..', '..', '..', '..');
+}
+
+/**
+ * Tasarım yeteneklerini otomatik aktar: Open Design DERLENMİŞSE onun stdio MCP
+ * sunucusunu (`od mcp live-artifacts`) OpenCode'a bağla → caphlon yazınca açılan
+ * AI tasarım/live-artifact araçlarını da otomatik kullanır. Derli değilse temizler.
+ */
+export function reconcileOpenDesignMcp(profile: string): boolean {
+  const cfgPath = join(profile, 'opencode.json');
+  if (!existsSync(cfgPath)) return false;
+  let cfg: Record<string, any>;
+  try {
+    cfg = JSON.parse(readFileSync(cfgPath, 'utf8')) as Record<string, any>;
+  } catch {
+    return false;
+  }
+  const odMjs = join(projRoot(), 'open-design-main', 'apps', 'daemon', 'bin', 'od.mjs');
+  const odDist = join(projRoot(), 'open-design-main', 'apps', 'daemon', 'dist', 'cli.js');
+  const ready = existsSync(odMjs) && existsSync(odDist);
+
+  const before = JSON.stringify(cfg);
+  cfg.mcp ??= {};
+  migrateLegacyMcpServers(cfg);
+  if (ready) {
+    cfg.mcp.opendesign = {
+      type: 'local',
+      command: ['node', odMjs, 'mcp', 'live-artifacts'],
+      enabled: true,
+      timeout: 60000,
+    };
+  } else {
+    delete cfg.mcp.opendesign;
+    if (cfg.mcp && Object.keys(cfg.mcp).length === 0) delete cfg.mcp;
+  }
+  if (JSON.stringify(cfg) !== before) {
+    writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
+  }
+  return ready;
+}
+
+/**
+ * Eski şemayı onar: çalışan OpenCode `mcp`'yi doğrudan ad→sunucu Record'u
+ * bekler (ara `servers` katmanı YOK) ve `timeout` ms cinsinden tam sayıdır
+ * (`{startup}` nesnesi değil). Geçmişte yazılmış config'leri yerinde düzeltir.
+ */
+function migrateLegacyMcpServers(cfg: Record<string, any>): void {
+  if (!cfg.mcp || typeof cfg.mcp !== 'object') return;
+  // 1) mcp.servers.* → mcp.* (üst seviyeye taşı)
+  const legacy = cfg.mcp.servers;
+  if (legacy && typeof legacy === 'object') {
+    for (const [name, srv] of Object.entries(legacy)) {
+      cfg.mcp[name] ??= srv;
+    }
+    delete cfg.mcp.servers;
+  }
+  // 2) timeout: {startup: N} → timeout: N  (her sunucuda)
+  for (const [key, srv] of Object.entries(cfg.mcp)) {
+    if (srv && typeof srv === 'object' && (srv as any).timeout && typeof (srv as any).timeout === 'object') {
+      const t = (srv as any).timeout;
+      (srv as any).timeout = typeof t.startup === 'number' ? t.startup : 60000;
+    }
+  }
 }
 
 /** packages/caphlon/opencode-profile (our config + theme source of truth) */
@@ -46,17 +141,17 @@ export function reconcileTokenlessMcp(profile: string): boolean {
   const bin = tokenlessBinaryPath();
   const before = JSON.stringify(cfg);
   cfg.mcp ??= {};
-  cfg.mcp.servers ??= {};
+  migrateLegacyMcpServers(cfg);
 
   if (bin) {
-    cfg.mcp.servers.tokenless = {
+    cfg.mcp.tokenless = {
       type: 'local',
       command: [bin, 'mcp-server'],
-      timeout: { startup: 60000 },
+      enabled: true,
+      timeout: 60000,
     };
   } else {
-    delete cfg.mcp.servers.tokenless;
-    if (Object.keys(cfg.mcp.servers).length === 0) delete cfg.mcp.servers;
+    delete cfg.mcp.tokenless;
     if (cfg.mcp && Object.keys(cfg.mcp).length === 0) delete cfg.mcp;
   }
 
@@ -128,6 +223,12 @@ export async function uiCommand(passthrough: string[]): Promise<void> {
   // Maksimum token tasarrufu: tokenless varsa MCP olarak bağla (yoksa temizle).
   const tokenlessOn = reconcileTokenlessMcp(profile);
 
+  // Skill katmanı: indeksi profile yaz + opencode instructions'a bağla.
+  const skillCount = reconcileSkillsInstruction(profile);
+
+  // Tasarım yetenekleri: Open Design MCP'sini otomatik bağla (derliyse).
+  const designOn = reconcileOpenDesignMcp(profile);
+
   if (active) {
     args.push('--model', opencodeModelString(active));
     if (active.apiKey) env[active.provider.envVar] = active.apiKey;
@@ -145,6 +246,16 @@ export async function uiCommand(passthrough: string[]): Promise<void> {
   } else {
     console.log(chalk.gray('   🪶 token tasarrufu: tokenless kurulu değil → `caphlon tokenless init` (cargo install tokenless)\n'));
   }
+
+  if (skillCount > 0) {
+    console.log(chalk.green(`   🧩 ${skillCount} skill bağlandı — model gerektiğinde ilgili SKILL.md'yi okur`));
+  } else {
+    console.log(chalk.gray('   🧩 skill yok → `caphlon skill add <repo>`'));
+  }
+  if (designOn) {
+    console.log(chalk.green('   🎨 Open Design araçları bağlandı (tasarım/live-artifact otomatik)'));
+  }
+  console.log('');
 
   args.push(...passthrough);
   const child = spawnSync(launcher.cmd, args, { stdio: 'inherit', env, cwd: launcher.cwd });
