@@ -14,7 +14,6 @@ $PY -m unittest -v \
   test_hive_fed \
   test_trajectory \
   test_fed_aggregate \
-  test_local_ensemble \
-  test_hive_eval
+  test_local_ensemble
 
 echo "✅ Kovan: tüm testler geçti"

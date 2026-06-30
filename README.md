@@ -114,10 +114,9 @@ Güç katmanları: **öz-topluluk** (tek kullanıcı, anında) · **swarm konsen
 **federated LoRA** (biriken). Güvenlik: validator + itibar + honeypot + anomali
 eleme. Gizlilik: ham veri makineden çıkmaz, yalnızca ağırlık farkı paylaşılır.
 
-### ⚖️ Dürüst değerlendirme — gerçek ölçümler (`caphlon hive eval`)
+### ⚖️ Dürüst değerlendirme — gerçek ölçümler
 
-Bu projenin iddialarını **tartmak** için bir eval harness'i var. Pazarlama değil,
-ölçü. Gerçek modellerle yapılan ölçümler:
+Bu projenin iddiaları **gerçek modellerle ölçüldü** (pazarlama değil, ölçü):
 
 | Senaryo | SOLO | HIVE | Δ | Neden |
 |---|---|---|---|---|
@@ -134,7 +133,7 @@ Bu projenin iddialarını **tartmak** için bir eval harness'i var. Pazarlama de
 
 > Yani "binlerce **aynı** zayıf düğüm → güçlü model" tek başına çalışmaz; tezin
 > doğru hâli **çeşitlilik + biriken hafıza**. Bu, tahminle değil **ölçümle**
-> belgelenmiştir — kendi modelinde test et: `caphlon hive eval`.
+> belgelenmiştir.
 
 ## Bileşenler
 
