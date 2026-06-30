@@ -1,0 +1,29 @@
+# =============================================================================
+# Caphlon — Kovan Koordinatörü (Hive Coordinator)
+# =============================================================================
+# Saf stdlib: pip bağımlılığı YOK → küçük imaj, hızlı başlangıç. "Binlerce zayıf
+# düğümün" buluştuğu merkezi tek komutla ayağa kaldırır.
+#   docker build -f Dockerfile.hive -t caphlon-hive .
+#   docker run -p 8777:8777 -v caphlon_hive:/data caphlon-hive
+FROM python:3.12-slim
+
+WORKDIR /app
+# Yalnızca koordinatörün ihtiyaç duyduğu saf-stdlib modüller.
+COPY core/hive_server.py core/hive_engine.py core/hive_cache.py \
+     core/security.py core/fed_aggregate.py core/adapter_registry.py \
+     /app/core/
+
+ENV HIVE_HOST=0.0.0.0 \
+    HIVE_PORT=8777 \
+    HIVE_QUORUM=3 \
+    HIVE_FED_QUORUM=3 \
+    HIVE_DATA=/data
+
+VOLUME ["/data"]
+EXPOSE 8777
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8777/health').status==200 else 1)"
+
+WORKDIR /app/core
+CMD ["sh", "-c", "python hive_server.py --host \"$HIVE_HOST\" --port \"$HIVE_PORT\" --quorum \"$HIVE_QUORUM\" --fed-quorum \"$HIVE_FED_QUORUM\" --data-dir \"$HIVE_DATA\""]

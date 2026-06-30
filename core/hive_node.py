@@ -134,13 +134,25 @@ def self_test(base: str, vbs_id: str, model_fn: Callable[[str], str]) -> Optiona
 
 
 def serve_node(base: str, vbs_id: str, model_fn: Callable[[str], str],
-               poll: float = 2.0, once: bool = False, verbose: bool = True) -> None:
-    """Bekleyen soruları yoklayıp cevaplayan düğüm döngüsü."""
+               poll: float = 2.0, once: bool = False, verbose: bool = True,
+               calibrate_every: int = 20) -> None:
+    """Bekleyen soruları yoklayıp cevaplayan düğüm döngüsü.
+
+    Her `calibrate_every` turda bir honeypot öz-testi yapar: kovan, düğümün
+    modelini cevabı bilinen bir tuzak soruyla yoklar ve itibarı günceller.
+    Böylece bozuk/hileli düğümlerin oy ağırlığı zamanla otomatik düşer ve
+    konsensüs kalitesi kendiliğinden artar (sürekli kalibrasyon)."""
     register(base, vbs_id)
     if verbose:
         print(f"🐝 düğüm '{vbs_id}' kovana katıldı → {base}")
     answered: set[int] = set()
+    rounds = 0
     while True:
+        rounds += 1
+        if calibrate_every > 0 and rounds % calibrate_every == 1:
+            passed = self_test(base, vbs_id, model_fn)
+            if verbose and passed is not None:
+                print(f"  [honeypot öz-test: {'✓ geçti' if passed else '✗ kaldı'}]")
         try:
             pend = _get(base, "/pending").get("pending", [])
         except Exception as e:

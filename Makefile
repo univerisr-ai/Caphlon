@@ -34,6 +34,9 @@ setup-cores: ## Install + build the JS cores (Caphlon CLI + Qualixar OS) so `cap
 test: ## Run all tests
 	$(PYTEST) tests/ -v --tb=short --cov=project_underdog --cov-report=term-missing
 
+test-hive: ## Run Kovan Zekası (hive) tests — pure stdlib, no deps
+	bash scripts/test-hive.sh
+
 test-coverage: ## Run tests with HTML coverage report
 	$(PYTEST) tests/ -v --tb=short --cov=project_underdog --cov-report=html
 	@echo "Coverage report: htmlcov/index.html"

@@ -10,6 +10,13 @@ node_modules/
 data/
 *.zip
 core/
+# Kovan koordinatörü için gereken saf-stdlib modülleri geri dahil et (Dockerfile.hive).
+!core/hive_server.py
+!core/hive_engine.py
+!core/hive_cache.py
+!core/security.py
+!core/fed_aggregate.py
+!core/adapter_registry.py
 "Dagitik Ogrenme (Federated Learning) - En Iyiler/"
 "Orkestrasyon (Ana Merkez) - En Iyiler/"
 "Token Tasarrufu - En Iyiler/"

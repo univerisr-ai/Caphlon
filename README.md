@@ -84,6 +84,34 @@ caphlon init         # Proje başlat
 > Qualixar OS / Aider / orkestratör aynı modeli kullansın. Detay:
 > [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md)
 
+## 🐝 Kovan Zekası — kaç kişi kullanırsa o kadar güçlü
+
+Zayıf donanım (2GB RAM / i5 3. nesil) ve zayıf model ile, **kalabalık +
+konsensüs + ortak hafıza** sayesinde güçlü-model kalitesine yaklaş. Para değil,
+katılım. Detay: [docs/HIVE.md](docs/HIVE.md)
+
+```bash
+# Tek makinede, bugün — bağlı modeli N kez örnekle, konsensüsle güçlendir
+caphlon hive solve "Bu fonksiyonun hatası ne?" --samples 5
+
+# Kanıt: çok düğüm → güç (simülasyon)
+caphlon hive demo
+
+# Swarm kur (binlerce kullanıcı senaryosu)
+caphlon hive serve                         # koordinatör (ya da: docker compose up -d hive)
+caphlon hive join --id n1                  # her kullanıcı kendi düğümüyle katılır (n1, n2, ...)
+caphlon hive ask "2+2 kactir?"             # kovan konsensüs cevabı
+
+# Biriken güç: lokal LoRA katkısı gönder / güncel ortak adapter'ı indir
+caphlon hive submit-delta --id n1 --delta delta.json
+caphlon hive pull --out adapter.json
+```
+
+Güç katmanları: **öz-topluluk** (tek kullanıcı, anında) · **swarm konsensüs**
+(çok kullanıcı, anında) · **ortak çözüm önbelleği** (N kullanıcı = N× hafıza) ·
+**federated LoRA** (biriken). Güvenlik: validator + itibar + honeypot + anomali
+eleme. Gizlilik: ham veri makineden çıkmaz, yalnızca ağırlık farkı paylaşılır.
+
 ## Bileşenler
 
 | Katman | Araç | Lisans | Doküman |

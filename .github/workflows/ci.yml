@@ -50,6 +50,18 @@ jobs:
       - name: Run Ruff format check
         run: ruff format --check project_underdog/
 
+  hive:
+    name: Kovan Zekası (hive, stdlib)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run hive tests (no deps)
+        run: bash scripts/test-hive.sh
+
   caphlon-cli:
     name: Caphlon CLI (Node)
     runs-on: ubuntu-latest

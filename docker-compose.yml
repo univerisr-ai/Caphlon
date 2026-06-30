@@ -44,6 +44,30 @@ services:
     command: ["python", "-m", "project_underdog.main", "worker", "--name", "docker-worker"]
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # Kovan Koordinatörü — "binlerce zayıf düğümün" buluştuğu merkez (saf stdlib).
+  #   docker compose up -d hive
+  # Düğümler:  caphlon hive join --id <ad> --server http://<host>:8777
+  # ---------------------------------------------------------------------------
+  hive:
+    build:
+      context: .
+      dockerfile: Dockerfile.hive
+    container_name: caphlon-hive
+    ports:
+      - "${HIVE_PORT:-8777}:8777"
+    environment:
+      - HIVE_HOST=0.0.0.0
+      - HIVE_PORT=8777
+      - HIVE_QUORUM=${HIVE_QUORUM:-3}
+      - HIVE_FED_QUORUM=${HIVE_FED_QUORUM:-3}
+      - HIVE_DATA=/data
+    volumes:
+      - hive_data:/data
+    restart: unless-stopped
+
 volumes:
   underdog_data:
+    driver: local
+  hive_data:
     driver: local
