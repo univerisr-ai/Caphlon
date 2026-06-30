@@ -78,6 +78,11 @@ def connected_model_fn(timeout: float = 120) -> Optional[Callable[[str], str]]:
     base = os.environ.get("UNDERDOG_LLM_BASE_URL", "").rstrip("/")
     model = os.environ.get("UNDERDOG_LLM_MODEL", "")
     key = os.environ.get("UNDERDOG_LLM_API_KEY", "")
+    # OpenCode Zen gibi ağ geçitleri Cloudflare User-Agent ister; varsayılan urllib
+    # UA'sı 403 (error 1010) alır. Zen "public" anahtarıyla anonim erişilir.
+    user_agent = os.environ.get("UNDERDOG_LLM_USER_AGENT", "opencode/0.1")
+    if not key and "opencode.ai/zen" in base:
+        key = "public"
     if not base or not model:
         return None
 
@@ -88,7 +93,7 @@ def connected_model_fn(timeout: float = 120) -> Optional[Callable[[str], str]]:
             "messages": [{"role": "user", "content": instruction}],
             "temperature": 0.7,   # küçük çeşitlilik → bağımsız hatalar → konsensüs çalışır
         }
-        headers = {"Content-Type": "application/json"}
+        headers = {"Content-Type": "application/json", "User-Agent": user_agent}
         if key:
             headers["Authorization"] = f"Bearer {key}"
         body = json.dumps(payload).encode()

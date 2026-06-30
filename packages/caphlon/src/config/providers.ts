@@ -28,6 +28,10 @@ export interface ProviderInfo {
   keyPrefix: string;
   /** Whether this provider needs an API key at all (Ollama is local) */
   needsKey: boolean;
+  /** Sabit/anonim anahtar (örn. OpenCode Zen "public" free tier). needsKey:false ile kullanılır. */
+  defaultKey?: string;
+  /** Cloudflare/proxy için gereken User-Agent (boşsa varsayılan). */
+  userAgent?: string;
   /** Where to get a key */
   keysUrl: string;
   /** Popular models — first entry is the default */
@@ -190,6 +194,26 @@ export const PROVIDERS: readonly ProviderInfo[] = [
     models: [
       { id: 'llama3.2', label: 'Llama 3.2 (yerel)' },
       { id: 'qwen2.5-coder', label: 'Qwen2.5 Coder (yerel)' },
+    ],
+  },
+  {
+    // OpenCode Zen — ücretsiz "public" tier (anahtar gerekmez). opencode'un
+    // /zen/v1 ağ geçidi; Cloudflare User-Agent ister.
+    id: 'opencode',
+    name: 'OpenCode Zen',
+    envVar: 'OPENCODE_ZEN_KEY',
+    baseUrl: 'https://opencode.ai/zen/v1',
+    keyPrefix: '',
+    needsKey: false,
+    defaultKey: 'public',
+    userAgent: 'opencode/0.1',
+    keysUrl: 'https://opencode.ai/zen',
+    models: [
+      { id: 'north-mini-code-free', label: 'North Mini Code (free)' },
+      { id: 'deepseek-v4-flash-free', label: 'DeepSeek V4 Flash (free)' },
+      { id: 'nemotron-3-ultra-free', label: 'Nemotron 3 Ultra (free)' },
+      { id: 'mimo-v2.5-free', label: 'MiMo V2.5 (free)' },
+      { id: 'big-pickle', label: 'Big Pickle (free)' },
     ],
   },
 ];

@@ -22,10 +22,12 @@ export function getActiveModel(): ActiveModel | null {
   const provider = getProvider(cfg.activeProvider);
   if (!provider) return null;
   const settings = cfg.providers[provider.id];
+  // needsKey:false sağlayıcılar sabit/anonim anahtar kullanabilir (örn. Zen "public").
+  const apiKey = provider.needsKey ? getCredential(provider.id) : (provider.defaultKey ?? null);
   return {
     provider,
     model: cfg.activeModel,
-    apiKey: provider.needsKey ? getCredential(provider.id) : null,
+    apiKey,
     baseUrl: settings?.baseUrl ?? provider.baseUrl,
   };
 }
@@ -45,6 +47,7 @@ export function activeModelEnv(): Record<string, string> {
     CAPHLON_PROVIDER: active.provider.id,
     CAPHLON_MODEL: active.model,
   };
+  if (active.provider.userAgent) env.UNDERDOG_LLM_USER_AGENT = active.provider.userAgent;
   if (active.apiKey) {
     env[active.provider.envVar] = active.apiKey;
     env.UNDERDOG_LLM_API_KEY = active.apiKey;
