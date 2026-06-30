@@ -8,6 +8,8 @@ Kovan Zekası ile topluluk destekli, merkeziyetsiz AI geliştirme sistemi. Devas
 
 ![Caphlon TUI — deniz/ahtapot temalı arayüz](docs/images/caphlon-tui.png)
 
+> Arayüz turu (karşılama ekranı + model seçici) için: [docs/UI.md](docs/UI.md)
+
 ---
 
 ## Tek Komutla Başla
