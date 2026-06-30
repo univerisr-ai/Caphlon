@@ -254,10 +254,10 @@ index 6c8fabd..2bd9ccd 100644
                        <Match when={(item.status as string) === "needs_client_registration" && item}>
                          {(val) => (val() as { error: string }).error}
 diff --git a/packages/tui/src/component/logo.tsx b/packages/tui/src/component/logo.tsx
-index db8e8dc..c0ad7c5 100644
+index db8e8dc..59139d1 100644
 --- a/packages/tui/src/component/logo.tsx
 +++ b/packages/tui/src/component/logo.tsx
-@@ -1,61 +1,140 @@
+@@ -1,61 +1,127 @@
  import { RGBA, TextAttributes } from "@opentui/core"
 -import { For, type JSX } from "solid-js"
 +import { For, createMemo } from "solid-js"
@@ -407,40 +407,27 @@ index db8e8dc..c0ad7c5 100644
 +}
 +
 +/**
-+ * CAPHLON wordmark — parlak, ahtapotun üstünde yuvarlak bir "deniz penceresi"
-+ * (rounded border) içinde. Alt-başlık ve slogan tam wordmark'ın ALTINDA,
-+ * ortalanmış; dalga ayracı (~) ikisini ayırır.
++ * CAPHLON wordmark — çerçevesiz, sadece yazı. Ahtapotun üstünde parlak durur;
++ * alt-başlık ve slogan tam wordmark'ın ALTINDA, ortalanmış (dalga ayracıyla).
 + */
 +export function Logo() {
 +  const { theme } = useTheme()
 +  return (
-+    <box
-+      alignItems="center"
-+      backgroundColor={theme.background}
-+      border
-+      borderStyle="rounded"
-+      borderColor={theme.secondary}
-+      title=" 🐙 Caphlon "
-+      titleColor={theme.accent}
-+      paddingLeft={6}
-+      paddingRight={6}
-+      paddingTop={1}
-+      paddingBottom={1}
-+    >
++    <box alignItems="center" backgroundColor={theme.background} paddingTop={1} paddingBottom={1}>
 +      <For each={CAPHLON}>
 +        {(line) => (
-+          <text fg={theme.text} bg={theme.background} attributes={TextAttributes.BOLD} selectable={false}>
++          <text fg={theme.text} attributes={TextAttributes.BOLD} selectable={false}>
 +            {line}
 +          </text>
          )}
        </For>
-+      <text fg={theme.primary} bg={theme.background} selectable={false}>
++      <text fg={theme.primary} selectable={false}>
 +        {WAVE}
 +      </text>
-+      <text fg={theme.secondary} bg={theme.background} attributes={TextAttributes.BOLD} selectable={false}>
++      <text fg={theme.secondary} attributes={TextAttributes.BOLD} selectable={false}>
 +        {SUBTITLE}
 +      </text>
-+      <text fg={theme.textMuted} bg={theme.background} selectable={false}>
++      <text fg={theme.textMuted} selectable={false}>
 +        {TAGLINE}
 +      </text>
      </box>
@@ -784,7 +771,7 @@ index a58a8cf..a0e2f17 100644
  
  export const go = {
 diff --git a/packages/tui/src/routes/home.tsx b/packages/tui/src/routes/home.tsx
-index d4145e2..bf8e9a2 100644
+index d4145e2..3727bf1 100644
 --- a/packages/tui/src/routes/home.tsx
 +++ b/packages/tui/src/routes/home.tsx
 @@ -1,6 +1,8 @@
@@ -821,7 +808,7 @@ index d4145e2..bf8e9a2 100644
      const configured = tuiConfig.prompt?.max_width
      if (configured === "auto") return Math.max(75, Math.floor(dimensions().width * 0.7))
      return configured ?? 75
-@@ -69,24 +73,62 @@ export function Home() {
+@@ -69,24 +73,68 @@ export function Home() {
  
    return (
      <HomeSessionDestinationProvider>
@@ -870,10 +857,22 @@ index d4145e2..bf8e9a2 100644
 +        >
 +          <OctopusBackground />
 +        </box>
-+        <box flexShrink={0} zIndex={10}>
++        {/* CAPHLON yazısı + HEMEN ALTINDA prompt — daraltılmış, ortalanmış */}
++        <box
++          flexShrink={0}
++          zIndex={1000}
++          alignItems="center"
++          gap={1}
++          width={Math.min(96, Math.max(48, Math.floor(dimensions().width * 0.5)))}
++        >
            <pluginRuntime.Slot name="home_logo" mode="replace">
              <Logo />
            </pluginRuntime.Slot>
++          <box width="100%">
++            <pluginRuntime.Slot name="home_prompt" mode="replace" ref={bind}>
++              <Prompt ref={bind} right={<pluginRuntime.Slot name="home_prompt_right" />} placeholders={placeholder} />
++            </pluginRuntime.Slot>
++          </box>
          </box>
 -        <box height={1} minHeight={0} flexShrink={1} />
 -        <box width="100%" maxWidth={promptMaxWidth()} zIndex={1000} paddingTop={1} flexShrink={0}>
@@ -886,12 +885,6 @@ index d4145e2..bf8e9a2 100644
          <Toast />
        </box>
 +
-+      {/* ALT — input tam genişlik, sabit */}
-+      <box width="100%" zIndex={1000} flexShrink={0} paddingLeft={2} paddingRight={2}>
-+        <pluginRuntime.Slot name="home_prompt" mode="replace" ref={bind}>
-+          <Prompt ref={bind} right={<pluginRuntime.Slot name="home_prompt_right" />} placeholders={placeholder} />
-+        </pluginRuntime.Slot>
-+      </box>
 +      <pluginRuntime.Slot name="home_bottom" />
        <box width="100%" flexShrink={0}>
          <pluginRuntime.Slot name="home_footer" mode="single_winner" />
