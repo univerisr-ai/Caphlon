@@ -1,5 +1,7 @@
 .venv/
 venv/
+core/aider-venv/
+core/data/
 node_modules/
 __pycache__/
 *.pyc
