@@ -167,8 +167,33 @@ export function setCredential(providerId: string, apiKey: string): void {
   writeCreds(creds);
 }
 
+/**
+ * Fallback: OpenCode kendi API anahtarlarını ~/.local/share/opencode/auth.json
+ * içinde ({ provider: { type, key } }) saklar. Caphlon'un makine-bağlı
+ * credentials.enc'i çözülemezse (örn. install.id değişti) buradan oku — böylece
+ * `caphlon hive` / orkestratör, TUI'nin kullandığı çalışan anahtarı bulur.
+ */
+function readOpencodeKey(providerId: string): string | null {
+  const candidates = [
+    process.env.XDG_DATA_HOME ? join(process.env.XDG_DATA_HOME, 'opencode', 'auth.json') : null,
+    join(homedir(), '.local', 'share', 'opencode', 'auth.json'),
+    join(homedir(), 'Library', 'Application Support', 'opencode', 'auth.json'),
+  ].filter((p): p is string => Boolean(p));
+  for (const p of candidates) {
+    if (!existsSync(p)) continue;
+    try {
+      const auth = JSON.parse(readFileSync(p, 'utf8')) as Record<string, { type?: string; key?: string }>;
+      const entry = auth[providerId];
+      if (entry?.key) return entry.key;
+    } catch {
+      /* sıradaki adaya geç */
+    }
+  }
+  return null;
+}
+
 export function getCredential(providerId: string): string | null {
-  return readCreds()[providerId] ?? null;
+  return readCreds()[providerId] ?? readOpencodeKey(providerId) ?? null;
 }
 
 export function removeCredential(providerId: string): void {

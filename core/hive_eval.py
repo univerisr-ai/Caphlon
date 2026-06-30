@@ -72,14 +72,23 @@ BUILTIN: list[Task] = [
 # --------------------------------------------------------------------------- #
 # Eval
 # --------------------------------------------------------------------------- #
+def _is_error(ans: str) -> bool:
+    """Model HATASI mı (yanlış cevap DEĞİL)? Boş ya da [model-hata...] → hata."""
+    a = (ans or "").strip()
+    return a == "" or a.startswith("[model-hata")
+
+
 @dataclass
 class EvalResult:
     n: int
     solo_correct: int
     hive_correct: int
+    solo_error: int = 0          # model çağrısı başarısız (rate-limit/timeout) — yanlış DEĞİL
+    hive_error: int = 0
     cache_hits: int = 0
     per_task: list[dict] = field(default_factory=list)
 
+    # Ham doğruluk: tüm görevler üzerinden (hata = başarısızlık sayılır).
     @property
     def solo_acc(self) -> float:
         return self.solo_correct / self.n if self.n else 0.0
@@ -91,6 +100,34 @@ class EvalResult:
     @property
     def delta(self) -> float:
         return self.hive_acc - self.solo_acc
+
+    # Adil doğruluk: yalnızca modelin GERÇEKTEN cevap verdiği görevler üzerinden
+    # (rate-limit/timeout hataları hariç). Asıl "model ne kadar iyi" budur.
+    @property
+    def solo_attempted(self) -> int:
+        return self.n - self.solo_error
+
+    @property
+    def hive_attempted(self) -> int:
+        return self.n - self.hive_error
+
+    @property
+    def solo_acc_clean(self) -> float:
+        return self.solo_correct / self.solo_attempted if self.solo_attempted else 0.0
+
+    @property
+    def hive_acc_clean(self) -> float:
+        return self.hive_correct / self.hive_attempted if self.hive_attempted else 0.0
+
+    @property
+    def delta_clean(self) -> float:
+        return self.hive_acc_clean - self.solo_acc_clean
+
+    @property
+    def reliable(self) -> bool:
+        """Hata oranı düşükse ölçüm güvenilir. Yüksekse sonuç anlamsız."""
+        worst = max(self.solo_error, self.hive_error)
+        return worst <= max(1, self.n // 10)
 
 
 def evaluate(
@@ -120,28 +157,43 @@ def evaluate(
         hive_ok = grade(t, hive_ans)
         if hres.source == "cache":
             res.cache_hits += 1
-        res.solo_correct += int(solo_ok)
-        res.hive_correct += int(hive_ok)
+        solo_err = _is_error(solo_ans)
+        hive_err = _is_error(hive_ans)
+        res.solo_error += int(solo_err)
+        res.hive_error += int(hive_err)
+        # Hata, "yanlış" sayılmaz: yalnızca gerçekten doğruysa puan.
+        res.solo_correct += int(solo_ok and not solo_err)
+        res.hive_correct += int(hive_ok and not hive_err)
         res.per_task.append({
             "q": t.question, "expected": t.expected,
-            "solo": solo_ans[:40], "solo_ok": solo_ok,
-            "hive": hive_ans[:40], "hive_ok": hive_ok, "source": hres.source,
+            "solo": solo_ans[:40], "solo_ok": solo_ok, "solo_error": solo_err,
+            "hive": hive_ans[:40], "hive_ok": hive_ok, "hive_error": hive_err,
+            "source": hres.source,
         })
     return res
 
 
 def format_report(res: EvalResult) -> str:
+    d = res.delta_clean
+    verdict = "✅ kovan yardımcı oldu" if d > 0 else ("➖ fark yok" if d == 0 else "⚠️ kovan geriletti")
     lines = [
         "🐝 Kovan Eval — SOLO (tek model) vs HIVE (ensemble+konsensüs+önbellek)",
-        f"  Görev sayısı : {res.n}   (ensemble örnek/görev sırada raporlanır)",
-        f"  SOLO doğruluk: %{res.solo_acc*100:.1f}   ({res.solo_correct}/{res.n})",
-        f"  HIVE doğruluk: %{res.hive_acc*100:.1f}   ({res.hive_correct}/{res.n})",
-        f"  Δ (kazanç)   : {'+' if res.delta>=0 else ''}{res.delta*100:.1f} puan"
-        f"   {'✅ kovan yardımcı oldu' if res.delta>0 else ('➖ fark yok' if res.delta==0 else '⚠️ kovan geriletti')}",
+        f"  Görev sayısı : {res.n}",
+        f"  Model hatası : SOLO {res.solo_error}/{res.n} · HIVE {res.hive_error}/{res.n}"
+        f"   (rate-limit/timeout — YANLIŞ değil, ölçüm dışı)",
+        "",
+        "  Doğruluk (yalnızca modelin cevap verdiği görevler üzerinden):",
+        f"    SOLO : %{res.solo_acc_clean*100:.1f}   ({res.solo_correct}/{res.solo_attempted})",
+        f"    HIVE : %{res.hive_acc_clean*100:.1f}   ({res.hive_correct}/{res.hive_attempted})",
+        f"    Δ    : {'+' if d>=0 else ''}{d*100:.1f} puan   {verdict}",
         f"  Önbellek isabeti: {res.cache_hits}",
         "",
-        "  Not: sonuç göreve ve modele bağlıdır; bu bir tartı, kanıt makinesi değil.",
     ]
+    if not res.reliable:
+        lines.append("  ⚠️ GÜVENİLMEZ: hata oranı yüksek (rate-limit). Bu Δ'ya GÜVENME —")
+        lines.append("     yerel model ya da daha yüksek limitli sağlayıcıyla tekrar koş.")
+    else:
+        lines.append("  Not: sonuç göreve ve modele bağlıdır; bu bir tartı, kanıt makinesi değil.")
     return "\n".join(lines)
 
 
@@ -169,8 +221,12 @@ def main():
     res = evaluate(fn, tasks, samples=args.samples)
     if args.json:
         print(json.dumps({
-            "n": res.n, "solo_acc": res.solo_acc, "hive_acc": res.hive_acc,
-            "delta": res.delta, "cache_hits": res.cache_hits, "per_task": res.per_task,
+            "n": res.n,
+            "solo_error": res.solo_error, "hive_error": res.hive_error,
+            "solo_acc_clean": res.solo_acc_clean, "hive_acc_clean": res.hive_acc_clean,
+            "delta_clean": res.delta_clean, "reliable": res.reliable,
+            "solo_acc_raw": res.solo_acc, "hive_acc_raw": res.hive_acc,
+            "cache_hits": res.cache_hits, "per_task": res.per_task,
         }, ensure_ascii=False, indent=2))
     else:
         print(format_report(res))

@@ -91,13 +91,30 @@ def connected_model_fn(timeout: float = 120) -> Optional[Callable[[str], str]]:
         headers = {"Content-Type": "application/json"}
         if key:
             headers["Authorization"] = f"Bearer {key}"
-        req = urllib.request.Request(url, data=json.dumps(payload).encode(), headers=headers, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                data = json.loads(r.read() or b"{}")
-            return (data.get("choices", [{}])[0].get("message", {}).get("content", "") or "").strip()
-        except Exception as e:
-            return f"[model-hata: {e.__class__.__name__}]"
+        body = json.dumps(payload).encode()
+        # Rate-limit (429) / geçici sunucu hatası (5xx) → üstel backoff ile yeniden
+        # dene. Böylece ensemble'ın N× çağrısı ücretsiz/limitli modelde de tamamlanır.
+        backoffs = [2, 4, 8, 16]
+        last = "Unknown"
+        for attempt in range(len(backoffs) + 1):
+            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as r:
+                    data = json.loads(r.read() or b"{}")
+                return (data.get("choices", [{}])[0].get("message", {}).get("content", "") or "").strip()
+            except urllib.error.HTTPError as e:
+                last = f"HTTP{e.code}"
+                if e.code in (429, 500, 502, 503, 504) and attempt < len(backoffs):
+                    time.sleep(backoffs[attempt])
+                    continue
+                return f"[model-hata: {last}]"
+            except Exception as e:
+                last = e.__class__.__name__
+                if attempt < len(backoffs):
+                    time.sleep(backoffs[attempt])
+                    continue
+                return f"[model-hata: {last}]"
+        return f"[model-hata: {last}]"
     return fn
 
 
