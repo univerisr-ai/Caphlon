@@ -10,6 +10,7 @@ import { onPath, findBun, findPython, firstExisting, projectRoot as root } from 
 import { tokenlessAvailable } from './tokenless.js';
 import { resolveMimoLauncher } from './compose.js';
 import { resolveHermesLauncher } from './hermes.js';
+import { resolveFlowerLauncher } from './flower.js';
 import { listSkills } from '../config/skills.js';
 
 /**
@@ -225,18 +226,8 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
     },
     {
       name: 'Flower (caphlon flower)',
-      // Dizin var demek "çalışır" demek DEĞİL: flwr gerçekten import edilebilmeli
-      // (caphlon flower ile aynı kontrol). Aksi halde doctor yeşil ama komut patlar.
-      ready: ((): boolean => {
-        if (onPath('flwr')) return true;
-        const dir = firstExisting(join(r, 'core', 'flower-main', 'framework'), join(r, 'flower-main', 'framework'));
-        const py = findPython();
-        if (!dir || !py) return false;
-        return spawnSync(py, ['-c', 'import flwr.cli.app'], {
-          stdio: 'ignore',
-          env: { ...process.env, PYTHONPATH: dir },
-        }).status === 0;
-      })(),
+      // Komutla AYNI kontrol (flower-venv / PATH / bundled import) — yalancı yeşil yok.
+      ready: resolveFlowerLauncher() !== null,
       how: 'pip install flwr  (veya: cd core/flower-main/framework && pip install -e .)',
     },
   ];

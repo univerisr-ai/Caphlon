@@ -12,7 +12,7 @@
  *   caphlon flower -- <args>  Bayrakları doğrudan flwr'a geçir
  */
 
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { getActiveModel } from '../config/active.js';
 import { findPython, firstExisting, onPath, spawnInherit, notFound, projectRoot } from '../external.js';
@@ -26,9 +26,19 @@ function findFlowerDir(): string | null {
 }
 
 /** Gerçek flwr'ı nasıl başlatacağımıza karar ver: PATH binary → bundled (Python). */
-function resolveLauncher(): { cmd: string; baseArgs: string[]; env?: Record<string, string> } | null {
+/** Export'lu: doctor da AYNI kontrolü kullanır (dizin değil gerçek flwr). */
+export function resolveFlowerLauncher(): { cmd: string; baseArgs: string[]; env?: Record<string, string> } | null {
+  // 1. Caphlon'un kendi flower-venv'i (izole flwr kurulumu — aider-venv gibi).
+  const venvFlwr = firstExisting(
+    join(projectRoot(), 'core', 'flower-venv', 'bin', 'flwr'),
+    join(projectRoot(), 'flower-venv', 'bin', 'flwr'),
+  );
+  if (venvFlwr) return { cmd: venvFlwr, baseArgs: [] };
+
+  // 2. PATH'teki flwr.
   if (onPath('flwr')) return { cmd: 'flwr', baseArgs: [] };
 
+  // 3. Bundled kaynak (PYTHONPATH ile import).
   const dir = findFlowerDir();
   const py = findPython();
   if (dir && py) {
@@ -44,7 +54,7 @@ function resolveLauncher(): { cmd: string; baseArgs: string[]; env?: Record<stri
 }
 
 export async function flowerCommand(args: string[]): Promise<void> {
-  const launcher = resolveLauncher();
+  const launcher = resolveFlowerLauncher();
   if (!launcher) {
     notFound('Flower (flwr)', [
       'pip install flwr',
@@ -57,6 +67,13 @@ export async function flowerCommand(args: string[]): Promise<void> {
   const env: Record<string, string> = { ...launcher.env };
   const active = getActiveModel();
   if (active?.apiKey) env.FLWR_MODEL_API_KEY = active.apiKey;
+
+  // flwr, yardımcı binary'lerini (flower-superlink/-supernode) PATH'te arar; bunlar
+  // venv'in bin'inde. Venv flwr'ı kullanılıyorsa o bin'i PATH'e ekle ki bulunabilsinler.
+  if (launcher.cmd.includes('flower-venv') || launcher.cmd.includes('/bin/flwr')) {
+    const binDir = dirname(launcher.cmd);
+    env.PATH = `${binDir}:${process.env.PATH ?? ''}`;
+  }
 
   spawnInherit(launcher.cmd, [...launcher.baseArgs, ...args], env);
 }
