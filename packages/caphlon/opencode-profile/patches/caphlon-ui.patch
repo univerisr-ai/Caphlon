@@ -254,10 +254,10 @@ index 6c8fabd..2bd9ccd 100644
                        <Match when={(item.status as string) === "needs_client_registration" && item}>
                          {(val) => (val() as { error: string }).error}
 diff --git a/packages/tui/src/component/logo.tsx b/packages/tui/src/component/logo.tsx
-index db8e8dc..49479b9 100644
+index db8e8dc..c0ad7c5 100644
 --- a/packages/tui/src/component/logo.tsx
 +++ b/packages/tui/src/component/logo.tsx
-@@ -1,61 +1,202 @@
+@@ -1,61 +1,140 @@
  import { RGBA, TextAttributes } from "@opentui/core"
 -import { For, type JSX } from "solid-js"
 +import { For, createMemo } from "solid-js"
@@ -290,54 +290,6 @@ index db8e8dc..49479b9 100644
 +const WAVE = "~".repeat(W)
 +const SUBTITLE = centerTo("Kovan Zekası · Unified AI Agent Platform")
 +const TAGLINE = centerTo("birlikte öğrenen, birlikte güçlenir")
-+
-+// Su altı sahnesi: yükselen kabarcıklar (∘ ° · o O), parıltı/yıldız (✦ ✶ ✧ ⋆),
-+// salınan yosun (( ) ∿), yüzen balık (><> <><), mercan (Y). Ahtapotun iki
-+// yanındaki su sütununu doldurur — kenarlar artık boş kalmaz.
-+const LEFT_DECO = [
-+  "  ✦    ·   ∘  ",
-+  "    ∘      °  ",
-+  " °   ><>   ·  ",
-+  "     ·    ✧   ",
-+  "  ∘    ) (    ",
-+  " )    ° )  ·  ",
-+  "( (    ( ( ∘  ",
-+  " ) )  )  ) ✶  ",
-+  "( ∿ ) ( ∿ )   ",
-+  " ) (  ) ( °   ",
-+  "  ∿    ) (  · ",
-+  " ·  ∘  ( )  ✦ ",
-+  "   <><   ·    ",
-+  " ✧    ∘   °   ",
-+  "   °  o   ∘   ",
-+  " ∘   ·    ✶   ",
-+  "  ) (  ∘   ·  ",
-+  " ( ( ) ·   ∘  ",
-+  "  ) ∿ )  ✧    ",
-+  " Y ) ( Y  °   ",
-+]
-+const RIGHT_DECO = [
-+  "  ∘   ·    ✦  ",
-+  "  °      ∘   ",
-+  "  ·   <><   ° ",
-+  "   ✧    ·    ",
-+  "    ( )    ∘  ",
-+  " ·  ( °    )  ",
-+  "  ∘ ) )    ) )",
-+  " ✶ (  (  ( (  ",
-+  "   ( ∿ ) ( ∿ )",
-+  "   ° ) (  ) ( ",
-+  " ·  ) (    ∿  ",
-+  " ✦  ( )  ∘  · ",
-+  "    ·   ><>   ",
-+  "   °   ∘    ✧ ",
-+  "   ∘   O  °   ",
-+  " ✶    ·   ∘   ",
-+  "  ·   ∘  ) (  ",
-+  "  ∘   · ( ) ) ",
-+  "    ✧  ( ∿ (  ",
-+  "   °  Y ) ( Y ",
-+]
 +
 +/**
 + * Ahtapot artık ARKA PLAN görseli: sönük (watermark gibi) renklerle, terminali
@@ -391,7 +343,6 @@ index db8e8dc..49479b9 100644
 +    if (h >= 24) return OCTOPUS_MEDIUM
 +    return OCTOPUS_SMALL
 +  })
-+  const showSides = createMemo(() => dimensions().width >= 80)
 +
 +  // Watermark: her şeyi arka plana doğru kuvvetlice yumuşat (sönük dursun).
 +  const dim = (c: RGBA, amt: number) => tint(theme.background, c, amt)
@@ -431,7 +382,6 @@ index db8e8dc..49479b9 100644
 +    }
    }
  
--  return (
 +  const renderChars = (line: string) =>
 +    Array.from(line).map((ch) => (
 +      <text fg={colorFor(ch)} selectable={false}>
@@ -439,31 +389,19 @@ index db8e8dc..49479b9 100644
 +      </text>
 +    ))
 +
-+  const Deco = (props: { art: string[] }) => (
-     <box>
++  // Yalnızca ahtapot — yan kabarcık/balık süsleri kaldırıldı (temiz su kenarı).
+   return (
+-    <box>
 -      <For each={logo.left}>
 -        {(line, index) => (
 -          <box flexDirection="row" gap={1}>
 -            <box flexDirection="row">{renderLine(line, theme.textMuted, false)}</box>
 -            <box flexDirection="row">{renderLine(logo.right[index()], theme.text, true)}</box>
 -          </box>
-+      <For each={props.art}>{(line) => <box flexDirection="row">{renderChars(line)}</box>}</For>
-+    </box>
-+  )
-+
-+  return (
-+    <box
-+      flexDirection="row"
-+      justifyContent="center"
-+      alignItems="center"
-+      paddingLeft={4}
-+      paddingRight={4}
-+    >
-+      {showSides() && <Deco art={LEFT_DECO} />}
++    <box justifyContent="center" alignItems="center">
 +      <box>
 +        <For each={octopus()}>{(line) => <box flexDirection="row">{renderChars(line)}</box>}</For>
 +      </box>
-+      {showSides() && <Deco art={RIGHT_DECO} />}
 +    </box>
 +  )
 +}
