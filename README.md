@@ -6,6 +6,8 @@ Kovan Zekası ile topluluk destekli, merkeziyetsiz AI geliştirme sistemi. Devas
 
 > *"Birlikte öğrenen, birlikte güçlenir."* – Kovan Zekası Manifestosu
 
+![Caphlon TUI — deniz/ahtapot temalı arayüz](docs/images/caphlon-tui.png)
+
 ---
 
 ## Tek Komutla Başla
@@ -111,6 +113,28 @@ Güç katmanları: **öz-topluluk** (tek kullanıcı, anında) · **swarm konsen
 (çok kullanıcı, anında) · **ortak çözüm önbelleği** (N kullanıcı = N× hafıza) ·
 **federated LoRA** (biriken). Güvenlik: validator + itibar + honeypot + anomali
 eleme. Gizlilik: ham veri makineden çıkmaz, yalnızca ağırlık farkı paylaşılır.
+
+### ⚖️ Dürüst değerlendirme — gerçek ölçümler (`caphlon hive eval`)
+
+Bu projenin iddialarını **tartmak** için bir eval harness'i var. Pazarlama değil,
+ölçü. Gerçek modellerle yapılan ölçümler:
+
+| Senaryo | SOLO | HIVE | Δ | Neden |
+|---|---|---|---|---|
+| Güçlü model (deepseek-v4-flash, 12 zor görev) | %100 | %100 | **0** | tavan — kaldıracak boşluk yok |
+| Zayıf model (qwen 0.5b, self-ensemble) | %50 | %50 | **0** | hatalar **korelasyonlu** (hep aynı yanlış) |
+
+**Net bulgu:** Saf consensus, düğümler **aynı** modeli koşarsa fark yaratmaz —
+çünkü tek bir modelin (ya da kopyalarının) hataları bağımsız değil, sistematiktir
+(Condorcet jüri teoremi bağımsızlık ister). Gerçek katkı şunları gerektirir:
+
+- **Model çeşitliliği** (farklı modeller → bağımsız hatalar → consensus düzeltir), ya da
+- **Ortak hafıza** (cache: bir kez çözüleni herkes bedava alır — en sağlam kazanç), ya da
+- **Federated** birikim (fail-safe + eval gate ile).
+
+> Yani "binlerce **aynı** zayıf düğüm → güçlü model" tek başına çalışmaz; tezin
+> doğru hâli **çeşitlilik + biriken hafıza**. Bu, tahminle değil **ölçümle**
+> belgelenmiştir — kendi modelinde test et: `caphlon hive eval`.
 
 ## Bileşenler
 
