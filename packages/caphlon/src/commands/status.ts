@@ -2,11 +2,12 @@
  * caphlon status — Check system status
  */
 
-import { getStatus, isQosRunning, checkOpenDesign } from '../qos-bridge.js';
+import { getStatus, checkOpenDesign } from '../qos-bridge.js';
 
 export async function statusCommand(): Promise<void> {
-  const qosRunning = isQosRunning();
+  // Cross-process: getStatus() discovers a `caphlon dev` running in another shell.
   const status = await getStatus();
+  const qosRunning = status.running;
   const odAvailable = await checkOpenDesign();
 
   console.log('\n╔══════════════════════════════════════════╗');
@@ -15,12 +16,10 @@ export async function statusCommand(): Promise<void> {
 
   // Qualixar OS
   console.log('📡 Qualixar OS:');
-  if (qosRunning && status.running) {
+  if (qosRunning) {
     console.log(`   Status:   ✅ Running (PID: ${status.pid})`);
     console.log(`   API:      http://localhost:${status.port}`);
     console.log(`   Dashboard: http://localhost:${status.dashboardPort}`);
-  } else if (qosRunning) {
-    console.log('   Status:   ⚠️  Process alive but not responding');
   } else {
     console.log('   Status:   ⬜ Not running');
     console.log('   Start:    caphlon dev');

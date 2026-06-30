@@ -7,7 +7,7 @@ PIP := .venv/bin/pip
 RUFF := .venv/bin/ruff
 PYTEST := .venv/bin/pytest
 
-.PHONY: help install setup test lint demo clean docker-build docker-up docker-down db-init
+.PHONY: help install setup setup-cores test lint demo clean docker-build docker-up docker-down db-init
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -27,6 +27,9 @@ setup: ## Create venv and install everything
 	$(PIP) install ruff pytest pytest-asyncio pytest-cov
 	cp -n .env.example .env 2>/dev/null || true
 	@echo "Setup complete. Edit .env with your configuration."
+
+setup-cores: ## Install + build the JS cores (Caphlon CLI + Qualixar OS) so `caphlon run` works
+	bash scripts/setup-cores.sh
 
 test: ## Run all tests
 	$(PYTEST) tests/ -v --tb=short --cov=project_underdog --cov-report=term-missing

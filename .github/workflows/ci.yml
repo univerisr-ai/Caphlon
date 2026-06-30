@@ -50,6 +50,45 @@ jobs:
       - name: Run Ruff format check
         run: ruff format --check project_underdog/
 
+  caphlon-cli:
+    name: Caphlon CLI (Node)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/caphlon
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: packages/caphlon/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests (cross-process discovery)
+        run: npm test
+
+      - name: Smoke — doctor runs
+        run: node bin/caphlon.js doctor || true
+
+      - name: Smoke — `run` fails closed without a server
+        run: |
+          if node bin/caphlon.js run "ping" --no-autostart; then
+            echo "BEKLENMEDİK: sunucu yokken run başarılı döndü" && exit 1
+          else
+            echo "OK: run sunucu olmadan exit!=0 ile düzgün başarısız oldu"
+          fi
+
   test:
     name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest

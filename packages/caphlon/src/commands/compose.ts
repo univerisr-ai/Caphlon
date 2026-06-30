@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import chalk from 'chalk';
 import { getActiveModel, activeModelEnv, opencodeModelString } from '../config/active.js';
 import { findBun, firstExisting, onPath, spawnInherit, notFound, projectRoot } from '../external.js';
+import { buildSkillPreamble } from '../config/skills.js';
 
 const COMPOSE_STAGES = [
   { name: 'brainstorm', emoji: '💡', desc: 'Gereksinim analizi & spesifikasyon' },
@@ -36,7 +37,7 @@ function findMimoDir(): string | null {
 }
 
 /** Gerçek MiMo'yu nasıl başlatacağımıza karar ver: PATH binary → bundled (Bun). */
-function resolveLauncher(): { cmd: string; baseArgs: string[]; cwd?: string } | null {
+export function resolveMimoLauncher(): { cmd: string; baseArgs: string[]; cwd?: string } | null {
   // 1. Kurulu `mimo` (npm i -g @mimo-ai/cli)
   if (onPath('mimo')) return { cmd: 'mimo', baseArgs: [] };
 
@@ -82,7 +83,13 @@ async function handleComposeStart(args: string[]): Promise<void> {
   }
   console.log('');
 
-  await launchMimo(['--prompt', description], 'compose');
+  // AKTİF skill enjeksiyonu: ayrıştırma yolu da göreve uygun tam SKILL.md'leri alsın.
+  const { prompt, used } = buildSkillPreamble(description);
+  if (used.length) {
+    console.log(chalk.green(`🧩 ${used.length} skill aktif enjekte edildi: ${used.join(', ')}\n`));
+  }
+
+  await launchMimo(['--prompt', prompt], 'compose');
 }
 
 /** Gerçek MiMo'yu compose ajanıyla, bağlı modelle başlat. */
@@ -94,7 +101,7 @@ async function launchMimo(extraArgs: string[], agent: string): Promise<void> {
     return;
   }
 
-  const launcher = resolveLauncher();
+  const launcher = resolveMimoLauncher();
   if (!launcher) {
     notFound('MiMo Code', [
       'npm install -g @mimo-ai/cli',

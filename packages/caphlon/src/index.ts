@@ -19,7 +19,12 @@ import { uiCommand } from './commands/ui.js';
 import { hermesCommand } from './commands/hermes.js';
 import { tokenlessCommand } from './commands/tokenless.js';
 import { flowerCommand } from './commands/flower.js';
+import { hiveCommand } from './commands/hive.js';
 import { startCommand } from './commands/start.js';
+import { skillCommand } from './commands/skill.js';
+import { serveCommand } from './commands/serve.js';
+import { toolsCommand } from './commands/tools.js';
+import { maxCommand } from './commands/max.js';
 
 const VERSION = '0.1.0';
 
@@ -70,14 +75,16 @@ export async function run(): Promise<void> {
     .command('run')
     .description('Run a task via Caphlon agent system')
     .argument('<prompt>', 'Task description')
-    .action(async (prompt: string) => {
+    .option('--no-autostart', 'Çalışan bir sunucu yoksa otomatik başlatma')
+    .action(async (prompt: string, options: { autostart?: boolean }) => {
       console.log(`\n🧠 Running task: ${prompt}\n`);
-      const result = await runTask(prompt);
+      const result = await runTask(prompt, { autostart: options.autostart !== false });
       if (result.success) {
         console.log('✅ Task completed!\n');
         console.log(result.output);
       } else {
         console.error('❌ Task failed:', result.error);
+        process.exitCode = 1;
       }
     });
 
@@ -97,8 +104,9 @@ export async function run(): Promise<void> {
   program
     .command('doctor')
     .description('Run system diagnostics')
-    .action(async () => {
-      await doctorCommand();
+    .option('--fix', 'Eksik çekirdekleri otomatik kur/derle (setup-cores) ve yeniden tanıla')
+    .action(async (options: { fix?: boolean }) => {
+      await doctorCommand(options);
     });
 
   // -----------------------------------------------------------------------
@@ -314,6 +322,111 @@ Examples:
       const raw = ddIdx >= 0 ? process.argv.slice(ddIdx + 1) : [];
       const passthrough = [...(args ?? []).filter((a) => !raw.includes(a)), ...raw];
       await flowerCommand(passthrough);
+    });
+
+  // -----------------------------------------------------------------------
+  // caphlon hive — Kovan Zekası (konsensüs + ortak önbellek + federated)
+  // -----------------------------------------------------------------------
+  program
+    .command('hive')
+    .alias('kovan')
+    .description('Kovan Zekası — binlerce zayıf düğüm → tek güçlü cevap (konsensüs + ortak hafıza)')
+    .argument('[sub]', 'serve | join | ask | train | stats | demo')
+    .argument('[args...]', 'alt-komut argümanları')
+    .allowUnknownOption()
+    .addHelpText('after', `
+Örnekler:
+  caphlon hive serve              Koordinatörü başlat
+  caphlon hive join --id n1       Düğüm olarak katıl
+  caphlon hive ask "2+2 kactir?"  Kovana sor (konsensüs cevabı)
+  caphlon hive demo               "Çok düğüm → güç" kanıtı
+`)
+    .action(async (sub: string | undefined, args: string[]) => {
+      const ddIdx = process.argv.indexOf('--');
+      const raw = ddIdx >= 0 ? process.argv.slice(ddIdx + 1) : [];
+      const passthrough = [...(args ?? []).filter((a) => !raw.includes(a)), ...raw];
+      await hiveCommand(sub, passthrough);
+    });
+
+  // -----------------------------------------------------------------------
+  // caphlon skill — Skill deposu & öğrenme katmanı (aynı modeli güçlendirir)
+  // -----------------------------------------------------------------------
+  program
+    .command('skill')
+    .description('Skill deposu & öğrenme — GitHub skill\'lerini çek, yerelde tut, modele enjekte et')
+    .argument('[action]', 'list | add | search | show | learn | sync')
+    .argument('[arg]', 'repo/yol/terim/id/başlık · sync: status|push|pull')
+    .argument('[repo]', 'sync push/pull için owner/repo (bir kez verilir, saklanır)')
+    .option('--desc <text>', 'learn: kısa açıklama')
+    .option('--when <text>', 'learn: ne zaman kullanılır')
+    .option('--body <text>', 'learn: skill gövdesi')
+    .addHelpText('after', `
+Örnekler:
+  caphlon skill list                       Yerel skill'leri göster
+  caphlon skill add anthropics/skills      GitHub reposundan skill çek
+  caphlon skill add ./open-design-main     Yerel dizinden ekle
+  caphlon skill search "pdf tablo"         İndekste ara
+  caphlon skill learn "X tuzağı" --body "..."   Bir dersi kaydet
+  caphlon skill sync                       Senkron durumu + uzak depo
+  caphlon skill sync push owner/repo       Öğrenilenleri git reposuna gönder
+  caphlon skill sync pull                  Öğrenilenleri uzak repodan çek
+`)
+    .action(async (action, arg, repo, options) => {
+      await skillCommand(action, arg, options, repo);
+    });
+
+  // -----------------------------------------------------------------------
+  // caphlon max — Best-of-N + judge (zayıf modeli güçlendiren inference-time)
+  // -----------------------------------------------------------------------
+  program
+    .command('max')
+    .description('Best-of-N + judge ile çöz (MiMo max agent) — zayıf modeli güçlendirir')
+    .argument('[task...]', 'Görev açıklaması')
+    .option('-n, --candidates <n>', 'Paralel aday sayısı (varsayılan 5)')
+    .addHelpText('after', `
+Örnekler:
+  caphlon max "kullanıcı auth'u olan REST API yaz"   5 aday + judge
+  caphlon max -n 3 "şu bug'ı bul ve düzelt"           3 aday
+  caphlon max                                          etkileşimli (max agent)
+`)
+    .action(async (task: string[], options) => {
+      await maxCommand((task ?? []).join(' '), options);
+    });
+
+  // -----------------------------------------------------------------------
+  // caphlon serve — Yerel model gateway (LiteLLM proxy) + araç auto-link
+  // -----------------------------------------------------------------------
+  program
+    .command('serve')
+    .description('Yerel model gateway başlat (Claude Code/Codex/OpenCode buraya bağlanır)')
+    .option('-p, --port <port>', 'Port (varsayılan: 4000)')
+    .option('--link', 'Kurulu araçları otomatik bu gateway\'e bağla')
+    .addHelpText('after', `
+Örnekler:
+  caphlon serve            Gateway'i başlat (OpenAI + Anthropic uyumlu)
+  caphlon serve --link     Başlat + Claude Code/Codex/OpenCode'u otomatik bağla
+`)
+    .action(async (options) => {
+      await serveCommand(options);
+    });
+
+  // -----------------------------------------------------------------------
+  // caphlon tools — Cihazdaki AI araçlarını bul & gateway'e bağla
+  // -----------------------------------------------------------------------
+  program
+    .command('tools')
+    .description('Cihazdaki AI araçlarını (Claude Code, Codex, OpenCode) bul ve bağla')
+    .argument('[action]', 'list | link | unlink')
+    .argument('[id]', 'araç id (claude | codex | opencode)')
+    .addHelpText('after', `
+Örnekler:
+  caphlon tools            Kurulu araçları + bağlantı durumunu göster
+  caphlon tools link       Hepsini gateway'e bağla (yedekli, geri alınabilir)
+  caphlon tools link claude  Sadece Claude Code'u bağla
+  caphlon tools unlink     Tüm bağlantıları kaldır (yedekten geri al)
+`)
+    .action(async (action, id) => {
+      await toolsCommand(action, id);
     });
 
   // -----------------------------------------------------------------------

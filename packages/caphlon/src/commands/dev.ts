@@ -5,7 +5,7 @@
  * optionally checks for Open Design daemon.
  */
 
-import { startQos, stopQos, getStatus, isQosRunning, checkOpenDesign } from '../qos-bridge.js';
+import { startQos, stopQos, getStatus, checkOpenDesign } from '../qos-bridge.js';
 
 const BANNER = `
 ╔══════════════════════════════════════════╗
@@ -20,13 +20,12 @@ export async function devCommand(options: { port?: string; dashboardPort?: strin
 
   console.log(BANNER);
 
-  // Check if already running
-  if (isQosRunning()) {
+  // Check if already running (cross-process: also catches a `dev` in another shell)
+  const existing = await getStatus();
+  if (existing.running) {
     console.log('⚠️  Caphlon is already running.');
-    const status = await getStatus();
-    if (status.running) {
-      console.log(`   Dashboard: http://localhost:${status.dashboardPort}`);
-    }
+    console.log(`   API:      http://localhost:${existing.port}`);
+    console.log(`   Dashboard: http://localhost:${existing.dashboardPort}`);
     return;
   }
 
@@ -44,7 +43,7 @@ export async function devCommand(options: { port?: string; dashboardPort?: strin
 
   try {
     console.log('🚀 Starting Qualixar OS...');
-    const qos = await startQos(port, dashboardPort);
+    const qos = await startQos(port, dashboardPort, { dashboard: !options.noDashboard });
 
     console.log(`   API:      http://localhost:${qos.port}`);
 
