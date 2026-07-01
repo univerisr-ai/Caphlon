@@ -1,8 +1,14 @@
 # Caphlon — Geliştirme Planı (Eksik Kapatma)
 
-> **Tarih:** 2026-06-29
+> **Tarih:** 2026-06-29 · *güncelleme 2026-07-01*
 > **Kapsam:** Mevcut kod tabanının kanıta dayalı durum tespiti + önceliklendirilmiş yol haritası.
 > **Yöntem:** `typecheck` (0 hata), `caphlon doctor` (18/18), komut akış denemeleri, çekirdek dizin denetimi.
+
+> ⚠️ **Dal/merge durumu (2026-07-01):** Aşağıda "Bitti" işaretli P0/P1 kalemleri **`feat/wire-tools-and-caphlon-ui`
+> dalında** yaşıyor — `origin/main`'e **henüz merge edilmedi** (dal 27 commit ileride, main 2 commit ıraksak).
+> `origin/main` ayrı bir **Ink+React TUI** taşıyor; merge `package.json` / `src/index.ts` / `tsconfig.json`'da
+> çakışır ve iki UI yaklaşımının uzlaştırılmasını gerektirir. Yani bu maddeler *dalda* doğrulandı ama
+> *main'de henüz yok* — "Done" ⇒ "dalda ship, main'e merge bekliyor" diye okuyun.
 
 ---
 
@@ -79,6 +85,15 @@ trace → aday skill diff → judge → insan onayı. **Done:** Bir trace'ten on
 ### P1-3 · Blind Verification (GAP_ANALYSIS #2)
 Generator ↔ verifier izolasyonu: üreten modelin çıktısını **bağımsız** bir judge doğrular,
 üretici kendi işini onaylayamaz. **Done:** `caphlon max` / compose verify aşamasına entegre, test.
+
+> **Federated varyant — ✅ wired (2026-07-01):** Kovan federated katmanında blind-eval gate artık
+> koordinatöre bağlı. `hive_server.HiveState(eval_fn=...)` verilirse, birleştirilen aday LoRA adapter
+> yalnızca **bağımsız holdout skorunu** (mevcut dağıtımdaki adapter'a göre) artırırsa otomatik
+> `verified=True` yayınlanır; regresyon reddedilir. `eval_fn` yoksa saf-stdlib davranış korunur
+> (doğrulanmamış yayın + dışsal `/adapter/verify` fail-safe). Test: `test_hive_fed.HiveFedGateTest`
+> (kabul→oto-doğrula+pull, ve regresyon→red). **Kalan:** gerçek model koşturan holdout harness'ının
+> (`fine_tune`/`model_serve` üstünden) enjekte edilmesi ve `caphlon max`/compose verify aşamasına
+> aynı izolasyonun taşınması.
 
 ### P1-4 · `caphlon doctor --fix` — ✅ **Bitti**
 Hata varsa idempotent `setup-cores`'u çalıştırıp tek seferlik yeniden tanılar (sonsuz döngü yok).

@@ -8,6 +8,9 @@ import { spawnSync } from 'node:child_process';
 import { findQosDir, findOpenDesignDir, findProjectRoot, checkOpenDesign } from '../qos-bridge.js';
 import { onPath, findBun, findPython, firstExisting, projectRoot as root } from '../external.js';
 import { tokenlessAvailable } from './tokenless.js';
+import { resolveMimoLauncher } from './compose.js';
+import { resolveHermesLauncher } from './hermes.js';
+import { resolveFlowerLauncher } from './flower.js';
 import { listSkills } from '../config/skills.js';
 
 /**
@@ -205,13 +208,16 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
     },
     {
       name: 'MiMo Code (caphlon compose)',
-      ready: onPath('mimo') || (!!findBun() && bundled(join(r, 'MiMo-Code-main', 'packages', 'opencode', 'script', 'dev.ts'))),
-      how: 'npm i -g @mimo-ai/cli',
+      // Komutla AYNI kontrol (dizin değil gerçek launcher): bun + dev.ts çözülebiliyor mu.
+      ready: resolveMimoLauncher() !== null,
+      how: 'npm i -g @mimo-ai/cli  (veya: Bun + MiMo-Code-main bağımlılıkları)',
     },
     {
       name: 'Hermes (caphlon hermes)',
-      ready: onPath('hermes') || bundled(join(r, 'core', 'hermes-agent-main'), join(r, 'hermes-agent-main')),
-      how: 'hermes-agent.nousresearch.com/install.sh',
+      // Komutla AYNI kontrol: hermes PATH'te VEYA `import hermes_cli.main` başarılı.
+      // Dizin var demek "çalışır" değil — deps yoksa import patlar.
+      ready: resolveHermesLauncher() !== null,
+      how: 'hermes-agent.nousresearch.com/install.sh  (Python deps gerekir)',
     },
     {
       name: 'tokenless (caphlon tokenless)',
@@ -220,8 +226,9 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
     },
     {
       name: 'Flower (caphlon flower)',
-      ready: onPath('flwr') || bundled(join(r, 'core', 'flower-main', 'framework'), join(r, 'flower-main', 'framework')),
-      how: 'pip install flwr',
+      // Komutla AYNI kontrol (flower-venv / PATH / bundled import) — yalancı yeşil yok.
+      ready: resolveFlowerLauncher() !== null,
+      how: 'pip install flwr  (veya: cd core/flower-main/framework && pip install -e .)',
     },
   ];
   for (const t of tools) {

@@ -63,8 +63,9 @@ function findHermesDir(): string | null {
   );
 }
 
-/** Gerçek Hermes'i nasıl başlatacağımıza karar ver: PATH binary → bundled (Python). */
-function resolveLauncher(): { cmd: string; baseArgs: string[]; env?: Record<string, string> } | null {
+/** Gerçek Hermes'i nasıl başlatacağımıza karar ver: PATH binary → bundled (Python).
+ *  Export'lu: doctor da AYNI kontrolü kullanır (yüzeysel "dizin var mı" yerine). */
+export function resolveHermesLauncher(): { cmd: string; baseArgs: string[]; env?: Record<string, string> } | null {
   if (onPath('hermes')) return { cmd: 'hermes', baseArgs: [] };
 
   const dir = findHermesDir();
@@ -92,7 +93,7 @@ export async function hermesCommand(args: string[]): Promise<void> {
     return;
   }
 
-  const launcher = resolveLauncher();
+  const launcher = resolveHermesLauncher();
   if (!launcher) {
     notFound('Hermes Agent', [
       'curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash',

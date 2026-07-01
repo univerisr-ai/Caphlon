@@ -6,10 +6,10 @@
  */
 
 import { spawn, type ChildProcess } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
-import { activeModelEnv } from './config/active.js';
+import { activeModelEnv, getActiveModel, type ActiveModel } from './config/active.js';
 import { caphlonHome } from './config/store.js';
 
 // ---------------------------------------------------------------------------
@@ -226,6 +226,11 @@ export async function startQos(
     );
   }
 
+  // qos kendi ~/.qualixar-os/config.yaml'ından model okur; UNDERDOG_LLM_* env'ini
+  // OKUMAZ. Bu yüzden `caphlon connect` modelinden geçerli bir qos config üret —
+  // yoksa qos'un LLM'i olmaz ve görevler hep pending'de kalır.
+  ensureQosConfig();
+
   // qos serve arayüzü: -p/--port <port> ve boolean --dashboard (port almaz).
   const serveArgs = [join(qosDir, 'bin', 'qos.js'), 'serve', '--port', String(port)];
   if (options.dashboard) serveArgs.push('--dashboard');
@@ -367,11 +372,18 @@ export async function runTask(prompt: string, options: RunTaskOptions = {}): Pro
       return { success: false, output: '', error: `API hatası: ${response.status}` };
     }
 
-    const data = (await response.json()) as Record<string, unknown>;
-    return {
-      success: true,
-      output: extractOutput(data),
-    };
+    const created = (await response.json()) as Record<string, unknown>;
+    const taskId = typeof created.taskId === 'string' ? created.taskId : undefined;
+
+    // qos görevi ASYNC çalıştırır ve hemen {status:'pending'} döner. Gerçek cevabı
+    // almak için görev bitene kadar GET /api/tasks/:id ile poll etmeliyiz — aksi
+    // halde "pending" yanıtı kullanıcıya gerçek sonuç gibi gösterilirdi (eski bug).
+    if (taskId && typeof target.port === 'number') {
+      const final = await pollTask(target.port, taskId, 120_000);
+      if (final) return final;
+      return { success: false, output: '', error: 'Görev zaman aşımına uğradı (sonuç gelmedi).' };
+    }
+    return { success: true, output: extractOutput(created) };
   } catch (err) {
     return {
       success: false,
@@ -391,6 +403,140 @@ function extractOutput(data: Record<string, unknown>): string {
     if (typeof v === 'string' && v.trim()) return v;
   }
   return JSON.stringify(data, null, 2);
+}
+
+/** Caphlon sağlayıcı id'sini qos provider tipine eşle (bilinmeyen = OpenAI-uyumlu). */
+function qosProviderType(id: string): string {
+  const known = new Set(['openai', 'anthropic', 'openrouter', 'google', 'groq', 'ollama', 'bedrock', 'azure-openai']);
+  return known.has(id) ? id : 'openai';
+}
+
+/** Aktif modelden geçerli bir qos config.yaml metni üret. */
+function renderQosConfig(active: ActiveModel): string {
+  const providerId = active.provider.id;
+  const type = qosProviderType(providerId);
+  const model = JSON.stringify(active.model); // çift tırnak → ":free" gibi içerikler güvenli
+  const endpoint = JSON.stringify(active.baseUrl);
+  const keyEnv = active.provider.envVar;
+  return [
+    '# caphlon-generated — `caphlon connect` modelinden üretildi. qos bunu yeniden',
+    '# üretebilir. Kendi config\'inizi korumak için bu başlık satırını silin.',
+    'mode: companion',
+    'models:',
+    `  primary: ${model}`,
+    `  fallback: ${model}`,
+    '  catalog:',
+    `    - name: ${model}`,
+    `      provider: ${providerId}`,
+    `      deployment: ${model}`,
+    '      quality_score: 0.7',
+    'providers:',
+    `  ${providerId}:`,
+    `    type: ${type}`,
+    `    endpoint: ${endpoint}`,
+    `    api_key_env: ${keyEnv}`,
+    'budget:',
+    '  max_usd: 5',
+    '  warn_pct: 0.8',
+    'security:',
+    '  container_isolation: false',
+    '  allowed_paths: []',
+    '  denied_commands: []',
+    'memory:',
+    '  enabled: true',
+    '  auto_invoke: true',
+    '  max_ram_mb: 50',
+    'dashboard:',
+    '  enabled: false',
+    '  port: 3001',
+    'channels:',
+    '  mcp: true',
+    '  http:',
+    '    enabled: true',
+    '    port: 3000',
+    'observability:',
+    '  log_level: info',
+    '',
+  ].join('\n');
+}
+
+/**
+ * qos ~/.qualixar-os/config.yaml'ından model okur (UNDERDOG_LLM_* okumaz). Bağlı
+ * modelden geçerli bir config üret — ama kullanıcının kendi config'ini EZME
+ * (yalnızca yoksa veya caphlon-generated ise yaz).
+ */
+function ensureQosConfig(): void {
+  const active = getActiveModel();
+  if (!active) return;
+  const dir = join(homedir(), '.qualixar-os');
+  const cfgPath = join(dir, 'config.yaml');
+  if (existsSync(cfgPath)) {
+    try {
+      if (!readFileSync(cfgPath, 'utf8').slice(0, 120).includes('caphlon-generated')) return;
+    } catch {
+      return; // okunamıyorsa dokunma
+    }
+  }
+  try {
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(cfgPath, renderQosConfig(active), { mode: 0o600 });
+  } catch {
+    /* best-effort — yazılamazsa qos kendi default davranışına düşer */
+  }
+}
+
+const TERMINAL_STATUS = new Set(['completed', 'failed', 'cancelled', 'pending_human_review']);
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Görev bitene kadar GET /api/tasks/:id ile poll et; gerçek çıktıyı döndür.
+ * Zaman aşımında null döner. Geçici ağ hataları yutulur (tekrar denenir).
+ */
+async function pollTask(port: number, taskId: string, timeoutMs: number): Promise<TaskResult | null> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await sleep(1200);
+    let task: Record<string, unknown> | undefined;
+    try {
+      const res = await fetch(`http://localhost:${port}/api/tasks/${taskId}`, {
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!res.ok) continue;
+      const body = (await res.json()) as { task?: Record<string, unknown> };
+      task = body.task;
+    } catch {
+      continue; // geçici ağ/sunucu hatası — tekrar dene
+    }
+    if (!task) continue;
+    const status = String(task.status ?? '');
+    if (!TERMINAL_STATUS.has(status)) continue; // pending/running → beklemeye devam
+
+    const answer = extractTaskOutput(task);
+    if (status === 'failed' || status === 'cancelled') {
+      return { success: false, output: '', error: answer || `görev ${status}` };
+    }
+    return { success: true, output: answer || `(görev durumu: ${status})` }; // completed | pending_human_review
+  }
+  return null; // zaman aşımı
+}
+
+/** task.result (qos TaskResult JSON) veya task alanlarından okunur cevabı çıkar. */
+function extractTaskOutput(task: Record<string, unknown>): string {
+  const raw = task.result;
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (typeof parsed.output === 'string' && parsed.output.trim()) return parsed.output;
+      if (typeof parsed.error === 'string' && parsed.error.trim()) return parsed.error;
+      return extractOutput(parsed);
+    } catch {
+      return raw; // JSON değil, düz metin
+    }
+  }
+  return extractOutput(task);
 }
 
 /**
