@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Callable, Optional
 from urllib.parse import urlparse, parse_qs
 
 from hive_engine import HiveEngine, NodeAnswer
@@ -43,7 +44,9 @@ from fed_aggregate import federated_round
 class HiveState:
     """Koordinatörün canlı durumu. Tek-thread sunucuda kilit gerekmez."""
 
-    def __init__(self, data_dir: str, quorum: int, fed_quorum: int = 3):
+    def __init__(self, data_dir: str, quorum: int, fed_quorum: int = 3,
+                 eval_fn: Optional[Callable[[dict], float]] = None,
+                 min_improvement: float = 0.0):
         self.engine = HiveEngine(
             reputation=ReputationSystem(db_path=f"{data_dir}/reputation.db"),
             cache=SharedSolutionCache(db_path=f"{data_dir}/hive_cache.db"),
@@ -56,6 +59,12 @@ class HiveState:
         self.registry = AdapterRegistry(root=f"{data_dir}/adapters")
         self.fed_quorum = fed_quorum
         self._deltas: list[dict] = []        # [{vbs_id, vectors}]
+        # Blind-eval gate: `eval_fn(vectors) -> skor` verilirse, birleştirilen aday
+        # adapter YALNIZCA bağımsız holdout skorunu artırırsa satır-içi doğrulanıp
+        # otomatik yayınlanır. Verilmezse (saf-stdlib varsayılan) davranış değişmez:
+        # adapter doğrulanmamış yayınlanır, dışsal /adapter/verify bekler.
+        self.eval_fn = eval_fn
+        self.min_improvement = min_improvement
 
     def submit_delta(self, vbs_id: str, vectors: dict) -> dict:
         """Bir düğümün lokal LoRA delta'sını al; fed_quorum dolunca birleştir+yayınla."""
@@ -66,17 +75,34 @@ class HiveState:
         deltas = [d["vectors"] for d in self._deltas]
         reps = [max(0.0, self.engine.rep.get_score(d["vbs_id"])) for d in self._deltas]
         base = self.registry.load_latest() or {}
-        # Anomali eleme + itibar-ağırlıklı FedAvg. (Blind-eval gate, model
-        # koşturan bir holdout harness'ı gerektirir → P2; kütüphane hazır.)
-        res = federated_round(base, deltas, reps, eval_fn=None)
+        # Anomali eleme + itibar-ağırlıklı FedAvg + (varsa) blind-eval gate.
+        # `current` = şu an dağıtımdaki (doğrulanmış) adapter; aday onunla kıyaslanır.
+        res = federated_round(
+            base, deltas, reps,
+            eval_fn=self.eval_fn,
+            current=self.registry.load_latest_verified(),
+            min_improvement=self.min_improvement,
+        )
         self._deltas.clear()
         if not res.published or res.merged is None:
-            return {"merged": False, "dropped": res.screen.dropped}
+            out = {"merged": False, "dropped": res.screen.dropped}
+            if res.gate is not None:                 # gate regresyonu reddetti
+                out["gate"] = res.gate.reason
+            return out
+        # Gate çalıştıysa: aday holdout'u geçti → otomatik doğrulanmış yayınla
+        # (dağıtıma anında açık). Gate yoksa: doğrulanmamış yayınla (fail-safe:
+        # dışsal /adapter/verify gelene dek düğümler çekemez).
+        if res.gate is not None:
+            entry = self.registry.publish(res.merged, score=res.gate.candidate_score,
+                                          verified=True)
+            return {"merged": True, "version": entry["version"], "verified": True,
+                    "dropped": res.screen.dropped, "contributors": len(reps),
+                    "gate": res.gate.reason}
         # Yayın skoru: katkıcı itibarlarının ortalaması (gerçek eval gelene dek vekil).
         score = sum(reps) / (len(reps) or 1)
         entry = self.registry.publish(res.merged, score=score)
-        return {"merged": True, "version": entry["version"], "dropped": res.screen.dropped,
-                "contributors": len(reps)}
+        return {"merged": True, "version": entry["version"], "verified": False,
+                "dropped": res.screen.dropped, "contributors": len(reps)}
 
     def new_question(self, instruction: str) -> int:
         qid = self._next_qid
@@ -245,8 +271,11 @@ def make_handler(state: HiveState):
     return Handler
 
 
-def build_server(host: str, port: int, data_dir: str, quorum: int, fed_quorum: int = 3):
-    state = HiveState(data_dir, quorum, fed_quorum=fed_quorum)
+def build_server(host: str, port: int, data_dir: str, quorum: int, fed_quorum: int = 3,
+                 eval_fn: Optional[Callable[[dict], float]] = None,
+                 min_improvement: float = 0.0):
+    state = HiveState(data_dir, quorum, fed_quorum=fed_quorum,
+                      eval_fn=eval_fn, min_improvement=min_improvement)
     httpd = HTTPServer((host, port), make_handler(state))
     return httpd, state
 
