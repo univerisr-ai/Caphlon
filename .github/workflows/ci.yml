@@ -8,9 +8,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [master, main, develop]
   pull_request:
-    branches: [main]
+    branches: [master, main]
   workflow_dispatch:
 
 concurrency:
@@ -90,8 +90,18 @@ jobs:
       - name: Unit tests (cross-process discovery)
         run: npm test
 
-      - name: Smoke — doctor runs
-        run: node bin/caphlon.js doctor || true
+      - name: Smoke — doctor çökmeden uçtan uca çalışır
+        # CI'da çekirdekler (aider/qos/MiMo…) kurulu değil → doctor sağlığı için
+        # exit 1 vermesi BEKLENİR. Bu yüzden sağlığı değil, komutun ÇÖKMEDEN
+        # çalıştığını (özet satırını ürettiğini) doğrularız. Gerçek bir çökme
+        # (Node exception, özet yok) job'ı kırar — sahte "geçti" yok.
+        run: |
+          set +e
+          out=$(node bin/caphlon.js doctor 2>&1); code=$?
+          set -e
+          echo "$out"
+          echo "$out" | grep -q "📊 Summary:" || { echo "HATA: doctor özet üretmeden çöktü"; exit 1; }
+          echo "OK: doctor uçtan uca çalıştı (exit=$code; çekirdekler CI'da kurulu değil, !=0 beklenir)"
 
       - name: Smoke — `run` fails closed without a server
         run: |
@@ -139,7 +149,7 @@ jobs:
         with:
           files: ./coverage.xml
           flags: unittests
-          fail_ci_if_error: false
+          fail_ci_if_error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
