@@ -181,7 +181,7 @@ let activeInstance: QosInstance | null = null;
  * uyuşmazlığı (NODE_MODULE_VERSION) olur. Çağıran node çok yeniyse, qos'u
  * çalıştırmak için uyumlu bir Node 22 binary'si bul. Bulunamazsa 'node'a düş.
  */
-function resolveNodeForQos(): string {
+export function resolveNodeForQos(): string {
   const major = Number(process.versions.node.split('.')[0]);
   if (major < 24) return process.execPath; // mevcut node zaten uygun
 
