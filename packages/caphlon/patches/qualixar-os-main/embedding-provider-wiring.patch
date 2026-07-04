@@ -1,0 +1,32 @@
+--- a/src/bootstrap.ts
++++ b/src/bootstrap.ts
+@@ -73,6 +73,7 @@
+ 
+ // Phase 5: Memory
+ import { createSLMLite } from './memory/index.js';
++import { createEmbeddingProvider } from './memory/embeddings.js';
+ 
+ // Phase 6: Orchestrator
+ import { SteeringImpl } from './engine/steering.js';
+@@ -170,7 +171,20 @@
+   const _autoSwarmBuilder = createAutoSwarmBuilder(modelRouter, forge); // 28e (not wired to orchestrator)
+ 
+   // -- Phase 5: Memory (Component 29) --
+-  const slmLite = createSLMLite(db, modelRouter, eventBus, configManager); // 29
++  // createSLMLite'a embeddingProvider hiç geçirilmiyordu -> semantic/vektör
++  // hafıza sessizce hiç aktifleşmiyordu (API anahtarı olsa bile), FTS5/LIKE
++  // her zaman kullanılıyordu. Gerçek sağlayıcıyı bağla + durumu görünür yap.
++  const embeddingProvider = createEmbeddingProvider();
++  if (embeddingProvider.isAvailable()) {
++    logger.info({ component: 'SLMLite' }, 'Semantic memory active (embedding provider available)');
++  } else {
++    logger.warn(
++      { component: 'SLMLite' },
++      'Semantic memory disabled (no embedding provider configured) — falling back to FTS5/keyword search. ' +
++      'Set AZURE_AI_ENDPOINT + AZURE_AI_API_KEY (or OLLAMA_HOST) to enable vector recall.',
++    );
++  }
++  const slmLite = createSLMLite(db, modelRouter, eventBus, configManager, embeddingProvider); // 29
+ 
+   // -- Phase 6: Orchestrator (Components 30-32) --
+   const steering = new SteeringImpl(eventBus);                       // 30

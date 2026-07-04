@@ -33,6 +33,8 @@ Bir model seçmek aktif modeli değiştirir; üst çubukta kaynağıyla birlikte
 ## Tema
 
 Renk paleti `packages/caphlon/opencode-profile/themes/caphlon.json`'da: derin
-mavi/turkuaz (deniz) + mor/mercan (ahtapot). Arayüz özelleştirmeleri
-`opencode-profile/patches/caphlon-ui.patch` ile vendored OpenCode kaynağına
-uygulanır.
+mavi/turkuaz (deniz) + mor/mercan (ahtapot). Vendored OpenCode kaynağına
+yapılan düzeltmeler `packages/caphlon/patches/opencode-main/*.patch` altında
+saklanır ve `make setup-cores` (`scripts/apply-patches.sh`) her kurulumda
+otomatik uygulanır — `core/opencode-main` `.gitignore`'da olduğundan (kendi
+git geçmişi yok) bu, yeniden klonlamada kaybolmamalarının tek yolu.
