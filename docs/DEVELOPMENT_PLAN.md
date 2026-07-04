@@ -131,7 +131,17 @@ Sağlıklı sistemde onarımı atlar; hatada exit 1. **Done ✓:** sağlıklı s
   yalnızca kozmetik bir kazanım (`caphlon status`'ta görünürlük) için kırılgan
   bir bağımlılık ekler. **Karar: yapılmayacak.** Qualixar OS'a "voice channel"
   olarak taşımak ise tamamen ayrı bir mimari tasarım kararı, bu maddenin dışında.
-- **P2-4 · Open Design Desktop** (GAP #4): native app entegrasyonu — ayrı epik.
+- **P2-4 · Open Design Desktop** (GAP #4): araştırıldı, KAPATILDI (2026-07-05).
+  Open Design'ın native masaüstü uygulaması (macOS/Windows, Electron —
+  `apps/desktop` + `apps/packaged`, `od://` protokol handler'ı) upstream'de
+  ZATEN yazılmış, code-signed, notarize edilmiş ve dağıtılıyor
+  (open-design.ai, GitHub Releases). Caphlon bilinçli olarak yalnızca
+  daemon+CLI alt kümesini taşıyor (`open-design-main/apps/daemon`) — desktop/web
+  klasörlerini dahil etmiyor. No-rewrite ilkesine göre burada Caphlon'un
+  yazacağı hiçbir şey yok; ürün zaten var. Tek opsiyonel/küçük iş — kurulu
+  native app varsa `caphlon design ui`'nin tarayıcı yerine onu tetiklemesi —
+  gerçek kurulu app olmadan doğrulanamadığı için (test edilmemiş davranış
+  merge edilmez) YAPILMADI; istenirse ayrı, doğrulanabilir bir P3 notu.
 - **P2-5 · `.env.example` ↔ `connect`** tutarlılık denetimi + `caphlon status` zenginleştirme.
 
 ---

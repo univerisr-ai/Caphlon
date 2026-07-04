@@ -115,7 +115,7 @@
 | 1 | **SkillEvolver** | ✅ Bitti. `caphlon skill evolve` — trace → aday → bağımsız judge → insan onayı |
 | 2 | **Blind Verification** | ✅ Bitti. `caphlon connect --judge`; max-mode + goal gate ayrı bağımsız modelle doğrular |
 | 3 | **Living Marketplace** | ✅ Bitti. `caphlon skill sync push/pull` (git) — evolved skill'ler paylaşılabilir, test'li |
-| 4 | **Open Design Desktop** | macOS/Windows native app, Linux optional lane — tam entegrasyon için ayrı bir adım |
+| 4 | **Open Design Desktop** | ✅ Kapatıldı: native app (macOS/Windows, Electron) upstream'de zaten yazılmış/imzalı/dağıtılıyor (open-design.ai) — Caphlon'un no-rewrite ilkesine göre yapacağı bir şey yok. Caphlon bilinçli olarak daemon+CLI alt kümesini taşıyor |
 | 5 | **MiMo Voice** | ✅ Kapatıldı: `/voice` zaten MiMo Code'da gerçek/çalışır (`caphlon ui` miras alır, `/login`→xiaomi bir kez yapılınca sorunsuz çalışıyor); `caphlon doctor` kayıt aracını (sox/rec/arecord) kontrol ediyor. Xiaomi'yi `caphlon connect`'e köprülemek araştırıldı ve BİLİNÇLİ OLARAK YAPILMAYACAK karar verildi (no-rewrite ihlali ya da kırılgan iç-dosya bağımlılığı gerektiriyor, kazanımı sadece kozmetik). Qualixar'a "channel" olarak taşımak ayrı bir epik olarak kalıyor |
 
 ---
@@ -156,9 +156,11 @@
 
 ## Özet
 
-**Kapatılan boşluk:** 14/14 ana eksiklik giderildi (SkillEvolver, Blind Verification, Living Marketplace, MiMo Voice dahil)
-**Devam eden:** Open Design Desktop (P2 — ayrı epik). MiMo Voice'un Qualixar
-channel'ı olarak taşınması ayrı bir mimari epik olarak roadmap'te kalıyor;
-Xiaomi'yi `caphlon connect`'e köprülemek ise bilinçli olarak YAPILMAYACAK.
+**Kapatılan boşluk:** 15/15 ana eksiklik giderildi (SkillEvolver, Blind
+Verification, Living Marketplace, MiMo Voice, Open Design Desktop dahil)
+**Devam eden:** Yok — tüm GAP maddeleri kapatıldı ya da bilinçli olarak
+yapılmayacak diye işaretlendi. Kalan tek açık uç: MiMo Voice'un Qualixar
+channel'ı olarak taşınması, ayrı bir mimari tasarım kararı gerektiren
+opsiyonel bir gelecek epik (zorunlu değil, voice zaten çalışıyor).
 **Yeni yetenekler:** Tasarım pipeline'ı, görsel/video üretimi, self-improvement,
 compose workflow, persistent memory, design critique
