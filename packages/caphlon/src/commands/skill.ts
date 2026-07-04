@@ -13,7 +13,9 @@
  *   caphlon skill sync                 Senkron durumu (Faz 2 — şimdilik yerel)
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { createInterface } from 'node:readline/promises';
+import { stdin, stdout } from 'node:process';
 import chalk from 'chalk';
 import {
   listSkills,
@@ -26,6 +28,15 @@ import {
   syncPull,
   skillsHome,
 } from '../config/skills.js';
+import {
+  clipTrace,
+  buildGeneratorPrompt,
+  buildJudgePrompt,
+  parseCandidate,
+  parseVerdict,
+} from '../config/evolve.js';
+import { getActiveModel, getJudgeModel, opencodeModelString } from '../config/active.js';
+import { llmComplete } from '../llm.js';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -126,6 +137,96 @@ function learnCmd(title: string, opts: { desc?: string; when?: string; body?: st
   console.log(chalk.green(`\n✓ Ders kaydedildi:\n  ${path}\n`));
 }
 
+/**
+ * SkillEvolver (P1-2): trace → aday skill → BAĞIMSIZ judge → insan onayı.
+ * Öner-onayla: --yes verilse bile judge reddederse KAYDETMEZ (fail-closed).
+ */
+async function evolveCmd(tracePath: string, opts: { yes?: boolean }): Promise<void> {
+  if (!tracePath || !existsSync(tracePath)) {
+    console.error(chalk.red('✖ Trace dosyası gerekli:  caphlon skill evolve <dosya>'));
+    console.log(chalk.gray('  (oturum dökümü, terminal çıktısı, diff — herhangi bir metin)'));
+    process.exitCode = 1;
+    return;
+  }
+  const active = getActiveModel();
+  if (!active) {
+    console.error(chalk.red('✖ Aktif model yok. Önce:  caphlon connect'));
+    process.exitCode = 1;
+    return;
+  }
+  const judge = getJudgeModel();
+  const judgeModel = judge ?? active;
+
+  const trace = clipTrace(readFileSync(tracePath, 'utf8'));
+  console.log(chalk.bold('\n🧬 SkillEvolver — trace → skill → judge → onay\n'));
+  console.log(chalk.gray(`  Trace : ${tracePath} (${trace.length} karakter)`));
+  console.log(chalk.gray(`  Üretici: ${opencodeModelString(active)}`));
+  if (judge) {
+    console.log(chalk.green(`  ⚖️  Judge : ${opencodeModelString(judge)} (bağımsız)`));
+  } else {
+    console.log(
+      chalk.yellow('  ⚠ Judge = üretici model (bağımsız değil) → caphlon connect <sağlayıcı> --judge'),
+    );
+  }
+
+  // 1. Aday üret
+  console.log(chalk.gray('\n  1/3 aday skill üretiliyor…'));
+  const genOut = llmComplete(active, { ...buildGeneratorPrompt(trace) });
+  const candidate = parseCandidate(genOut);
+  if (!candidate) {
+    console.log(chalk.yellow('\n∅ Bu trace\'ten yeniden kullanılabilir bir ders çıkarılamadı.'));
+    console.log(chalk.gray(`  Model yanıtı: ${genOut.slice(0, 200)}\n`));
+    process.exitCode = 1;
+    return;
+  }
+  console.log(chalk.bold(`\n  📄 Aday: ${candidate.title}`));
+  if (candidate.description) console.log(`     ${candidate.description}`);
+  if (candidate.whenToUse) console.log(chalk.gray(`     Ne zaman: ${candidate.whenToUse}`));
+  console.log(chalk.gray(`     ${'─'.repeat(60)}`));
+  for (const line of candidate.body.split('\n').slice(0, 12)) console.log(chalk.gray(`     ${line}`));
+  if (candidate.body.split('\n').length > 12) console.log(chalk.gray('     …'));
+
+  // 2. Bağımsız judge
+  console.log(chalk.gray('\n  2/3 judge değerlendiriyor…'));
+  const judgeOut = llmComplete(judgeModel, { ...buildJudgePrompt(candidate, trace) });
+  const verdict = parseVerdict(judgeOut);
+  if (!verdict) {
+    // Fail-closed: karar okunamıyorsa otomatik yol kapalı; insan yine karar verebilir.
+    console.log(chalk.yellow(`  ⚠ Judge kararı ayrıştırılamadı: ${judgeOut.slice(0, 150)}`));
+  } else if (verdict.approve) {
+    console.log(chalk.green(`  ✓ Judge ONAYLADI — ${verdict.reason}`));
+  } else {
+    console.log(chalk.red(`  ✖ Judge REDDETTİ — ${verdict.reason}`));
+  }
+
+  // 3. İnsan onayı (öner-onayla). --yes: yalnızca judge onayıyla otomatik.
+  if (opts.yes) {
+    if (!verdict?.approve) {
+      console.log(chalk.red('\n✖ --yes modunda judge onayı şart — kaydedilmedi.\n'));
+      process.exitCode = 1;
+      return;
+    }
+  } else {
+    const rl = createInterface({ input: stdin, output: stdout });
+    const answer = (await rl.question(chalk.bold('\n  3/3 Kaydedilsin mi? [y/N]: '))).trim().toLowerCase();
+    rl.close();
+    if (answer !== 'y' && answer !== 'yes' && answer !== 'e' && answer !== 'evet') {
+      console.log(chalk.gray('\n  Kaydedilmedi.\n'));
+      return;
+    }
+  }
+
+  const path = recordLearning({
+    title: candidate.title,
+    description: candidate.description,
+    whenToUse: candidate.whenToUse,
+    body: candidate.body,
+    createdAt: nowIso(),
+  });
+  console.log(chalk.green(`\n✓ Skill kaydedildi (learned):\n  ${path}\n`));
+  console.log(chalk.gray('  Paylaş:  caphlon skill sync push <owner/repo>\n'));
+}
+
 function syncStatusCmd(): void {
   const st = syncStatus();
   console.log(chalk.bold('\n🔄 Skill senkron durumu\n'));
@@ -181,7 +282,7 @@ function syncCmd(sub: string | undefined, repo: string | undefined): void {
 export async function skillCommand(
   action: string | undefined,
   arg: string | undefined,
-  opts: { desc?: string; when?: string; body?: string } = {},
+  opts: { desc?: string; when?: string; body?: string; yes?: boolean } = {},
   extra?: string,
 ): Promise<void> {
   switch (action) {
@@ -196,11 +297,13 @@ export async function skillCommand(
       return showCmd(arg ?? '');
     case 'learn':
       return learnCmd(arg ?? '', opts);
+    case 'evolve':
+      return evolveCmd(arg ?? '', opts);
     case 'sync':
       return syncCmd(arg, extra);
     default:
       console.error(chalk.red(`✖ Bilinmeyen alt-komut: ${action}`));
-      console.log(chalk.gray('  list | add | search | show | learn | sync'));
+      console.log(chalk.gray('  list | add | search | show | learn | evolve | sync'));
       process.exitCode = 1;
   }
 }
