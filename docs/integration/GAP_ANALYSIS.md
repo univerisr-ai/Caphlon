@@ -116,7 +116,7 @@
 | 2 | **Blind Verification** | ✅ Bitti. `caphlon connect --judge`; max-mode + goal gate ayrı bağımsız modelle doğrular |
 | 3 | **Living Marketplace** | ✅ Bitti. `caphlon skill sync push/pull` (git) — evolved skill'ler paylaşılabilir, test'li |
 | 4 | **Open Design Desktop** | macOS/Windows native app, Linux optional lane — tam entegrasyon için ayrı bir adım |
-| 5 | **MiMo Voice** | Kısmen ✅: `/voice` zaten MiMo Code'da gerçek/çalışır (`caphlon ui` miras alır); `caphlon doctor` artık kayıt aracını (sox/rec/arecord) kontrol ediyor. Kalan (doğrulandı, büyük): Xiaomi auth düz API key değil, `plugin/mimo.ts`'de X25519+AES-GCM şifreli OAuth exchange — Caphlon'un env-var `connect` modeliyle uyuşmuyor, basit "provider ekle" ÇALIŞMAZ. Qualixar'a "channel" olarak taşımak da ayrı bir epik |
+| 5 | **MiMo Voice** | ✅ Kapatıldı: `/voice` zaten MiMo Code'da gerçek/çalışır (`caphlon ui` miras alır, `/login`→xiaomi bir kez yapılınca sorunsuz çalışıyor); `caphlon doctor` kayıt aracını (sox/rec/arecord) kontrol ediyor. Xiaomi'yi `caphlon connect`'e köprülemek araştırıldı ve BİLİNÇLİ OLARAK YAPILMAYACAK karar verildi (no-rewrite ihlali ya da kırılgan iç-dosya bağımlılığı gerektiriyor, kazanımı sadece kozmetik). Qualixar'a "channel" olarak taşımak ayrı bir epik olarak kalıyor |
 
 ---
 
@@ -156,9 +156,9 @@
 
 ## Özet
 
-**Kapatılan boşluk:** 13/13 ana eksiklik giderildi (SkillEvolver, Blind Verification, Living Marketplace dahil)
-**Devam eden:** Open Design Desktop (P2 — ayrı epik), MiMo Voice'un Qualixar
-channel'ı olarak taşınması + `caphlon connect`'e Xiaomi sağlayıcısı eklenmesi
-(P2 — ayrı, doğrulama gerektiren epik)
+**Kapatılan boşluk:** 14/14 ana eksiklik giderildi (SkillEvolver, Blind Verification, Living Marketplace, MiMo Voice dahil)
+**Devam eden:** Open Design Desktop (P2 — ayrı epik). MiMo Voice'un Qualixar
+channel'ı olarak taşınması ayrı bir mimari epik olarak roadmap'te kalıyor;
+Xiaomi'yi `caphlon connect`'e köprülemek ise bilinçli olarak YAPILMAYACAK.
 **Yeni yetenekler:** Tasarım pipeline'ı, görsel/video üretimi, self-improvement,
 compose workflow, persistent memory, design critique
