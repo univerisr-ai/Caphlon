@@ -15,8 +15,9 @@
  *   ~/.caphlon/skills/learned/<slug>/SKILL.md Görevlerden çıkarılan dersler
  *   ~/.caphlon/skills/registry.json           kaynak repo listesi (sync için)
  *
- * Ay sonu: registry.json + learned/ bir GitHub reposuna push edilecek
- * (caphlon skill sync). Şimdilik tamamen yereldir.
+ * learned/ bir git reposuna push/pull edilebilir (caphlon skill sync push/pull —
+ * "Living Marketplace" P2-2). Eklenen kaynaklar (registry.json) sync'e dahil
+ * değildir; yalnızca learned/ paylaşılır.
  */
 
 import { spawnSync } from 'node:child_process';

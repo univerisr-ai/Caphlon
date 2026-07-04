@@ -112,9 +112,9 @@
 
 | # | Boşluk | Not |
 |---|---|---|
-| 1 | **SkillEvolver** | Roadmap'te. MiMo Dream/Distill temel oluşturdu ama otomatik skill mutation henüz yok |
-| 2 | **Blind Verification** | Roadmap'te. Generator-verifier isolation |
-| 3 | **Living Marketplace** | Roadmap'te. Evolved skills auto-publish |
+| 1 | **SkillEvolver** | ✅ Bitti. `caphlon skill evolve` — trace → aday → bağımsız judge → insan onayı |
+| 2 | **Blind Verification** | ✅ Bitti. `caphlon connect --judge`; max-mode + goal gate ayrı bağımsız modelle doğrular |
+| 3 | **Living Marketplace** | ✅ Bitti. `caphlon skill sync push/pull` (git) — evolved skill'ler paylaşılabilir, test'li |
 | 4 | **Open Design Desktop** | macOS/Windows native app, Linux optional lane — tam entegrasyon için ayrı bir adım |
 | 5 | **MiMo Voice** | /voice ASR henüz Qualixar'a taşınmadı, sadece pattern olarak belgelendi |
 
@@ -156,7 +156,7 @@
 
 ## Özet
 
-**Kapatılan boşluk:** 10/10 ana eksiklik giderildi
-**Devam eden:** SkillEvolver, Blind Verification, Living Marketplace
+**Kapatılan boşluk:** 13/13 ana eksiklik giderildi (SkillEvolver, Blind Verification, Living Marketplace dahil)
+**Devam eden:** Open Design Desktop, MiMo Voice (P2 — ayrı epikler)
 **Yeni yetenekler:** Tasarım pipeline'ı, görsel/video üretimi, self-improvement,
 compose workflow, persistent memory, design critique

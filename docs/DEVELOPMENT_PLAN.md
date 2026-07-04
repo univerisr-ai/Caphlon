@@ -103,8 +103,10 @@ Sağlıklı sistemde onarımı atlar; hatada exit 1. **Done ✓:** sağlıklı s
 
 ## Faz 3 — P2: Olgunlaşma / opsiyonel
 
-- **P2-1 · tokenless** opsiyonel kurulum yardımcısı (`cargo` yoksa net mesaj, atla).
+- **P2-1 · tokenless** opsiyonel kurulum yardımcısı (`cargo` yoksa net mesaj, atla). **Done ✓**
 - **P2-2 · Living Marketplace** (GAP #3): evolved skill'lerin yayınlanması — Faz 1 sync üstüne.
+  **Done ✓:** `caphlon skill sync push/pull` (git shell-out) `skill evolve` akışına bağlı;
+  `config/skills.test.ts` gerçek yerel git remote ile push/pull'u doğrular.
 - **P2-3 · MiMo Voice** (GAP #5): `/voice` ASR'ı Qualixar'a taşı.
 - **P2-4 · Open Design Desktop** (GAP #4): native app entegrasyonu — ayrı epik.
 - **P2-5 · `.env.example` ↔ `connect`** tutarlılık denetimi + `caphlon status` zenginleştirme.
