@@ -10,7 +10,7 @@
       "type": "local",
       "command": [
         "node",
-        "/Users/demir/Desktop/Caphlon/open-design-main/apps/daemon/bin/od.mjs",
+        "/Users/demir/Projects/Caphlon/open-design-main/apps/daemon/bin/od.mjs",
         "mcp",
         "live-artifacts"
       ],
