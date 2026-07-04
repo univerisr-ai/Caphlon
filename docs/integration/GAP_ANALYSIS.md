@@ -116,7 +116,7 @@
 | 2 | **Blind Verification** | ✅ Bitti. `caphlon connect --judge`; max-mode + goal gate ayrı bağımsız modelle doğrular |
 | 3 | **Living Marketplace** | ✅ Bitti. `caphlon skill sync push/pull` (git) — evolved skill'ler paylaşılabilir, test'li |
 | 4 | **Open Design Desktop** | macOS/Windows native app, Linux optional lane — tam entegrasyon için ayrı bir adım |
-| 5 | **MiMo Voice** | Kısmen ✅: `/voice` zaten MiMo Code'da gerçek/çalışır (`caphlon ui` miras alır); `caphlon doctor` artık kayıt aracını (sox/rec/arecord) kontrol ediyor. Kalan: Xiaomi kimlik doğrulaması TUI'nin kendi `/login`'inde — genel `caphlon connect` sağlayıcısı olarak eklemek ayrı, doğrulanmamış bir iş; Qualixar'a "channel" olarak taşımak ayrı bir epik |
+| 5 | **MiMo Voice** | Kısmen ✅: `/voice` zaten MiMo Code'da gerçek/çalışır (`caphlon ui` miras alır); `caphlon doctor` artık kayıt aracını (sox/rec/arecord) kontrol ediyor. Kalan (doğrulandı, büyük): Xiaomi auth düz API key değil, `plugin/mimo.ts`'de X25519+AES-GCM şifreli OAuth exchange — Caphlon'un env-var `connect` modeliyle uyuşmuyor, basit "provider ekle" ÇALIŞMAZ. Qualixar'a "channel" olarak taşımak da ayrı bir epik |
 
 ---
 
