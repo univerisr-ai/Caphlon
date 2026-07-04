@@ -357,12 +357,13 @@ Examples:
   program
     .command('skill')
     .description('Skill deposu & öğrenme — GitHub skill\'lerini çek, yerelde tut, modele enjekte et')
-    .argument('[action]', 'list | add | search | show | learn | sync')
-    .argument('[arg]', 'repo/yol/terim/id/başlık · sync: status|push|pull')
+    .argument('[action]', 'list | add | search | show | learn | evolve | sync')
+    .argument('[arg]', 'repo/yol/terim/id/başlık/trace · sync: status|push|pull')
     .argument('[repo]', 'sync push/pull için owner/repo (bir kez verilir, saklanır)')
     .option('--desc <text>', 'learn: kısa açıklama')
     .option('--when <text>', 'learn: ne zaman kullanılır')
     .option('--body <text>', 'learn: skill gövdesi')
+    .option('-y, --yes', 'evolve: insan onayını atla (yalnızca judge ONAYLARSA kaydeder)')
     .addHelpText('after', `
 Örnekler:
   caphlon skill list                       Yerel skill'leri göster
@@ -370,6 +371,7 @@ Examples:
   caphlon skill add ./open-design-main     Yerel dizinden ekle
   caphlon skill search "pdf tablo"         İndekste ara
   caphlon skill learn "X tuzağı" --body "..."   Bir dersi kaydet
+  caphlon skill evolve oturum.log          Trace → aday skill → judge → onay
   caphlon skill sync                       Senkron durumu + uzak depo
   caphlon skill sync push owner/repo       Öğrenilenleri git reposuna gönder
   caphlon skill sync pull                  Öğrenilenleri uzak repodan çek
