@@ -19,14 +19,28 @@ export interface ActiveModel {
 export function getActiveModel(): ActiveModel | null {
   const cfg = loadConfig();
   if (!cfg.activeProvider || !cfg.activeModel) return null;
-  const provider = getProvider(cfg.activeProvider);
+  return resolveModel(cfg.activeProvider, cfg.activeModel);
+}
+
+/**
+ * Kör doğrulama için bağlanmış AYRI judge modeli (caphlon connect --judge).
+ * Ayarlanmamışsa null — çağıran eski davranışa (judge = aktif model) düşer.
+ */
+export function getJudgeModel(): ActiveModel | null {
+  const cfg = loadConfig();
+  if (!cfg.judgeProvider || !cfg.judgeModel) return null;
+  return resolveModel(cfg.judgeProvider, cfg.judgeModel);
+}
+
+function resolveModel(providerId: string, model: string): ActiveModel | null {
+  const provider = getProvider(providerId);
   if (!provider) return null;
-  const settings = cfg.providers[provider.id];
+  const settings = loadConfig().providers[provider.id];
   // needsKey:false sağlayıcılar sabit/anonim anahtar kullanabilir (örn. Zen "public").
   const apiKey = provider.needsKey ? getCredential(provider.id) : (provider.defaultKey ?? null);
   return {
     provider,
-    model: cfg.activeModel,
+    model,
     apiKey,
     baseUrl: settings?.baseUrl ?? provider.baseUrl,
   };
@@ -52,6 +66,19 @@ export function activeModelEnv(): Record<string, string> {
     env[active.provider.envVar] = active.apiKey;
     env.UNDERDOG_LLM_API_KEY = active.apiKey;
   }
+  return env;
+}
+
+/**
+ * Judge modeli bağlıysa onun sağlayıcı anahtarını da alt sürece geçir —
+ * judge farklı bir sağlayıcıdaysa (örn. adaylar openrouter, judge groq)
+ * anahtarı olmadan MiMo o modeli çözemez.
+ */
+export function judgeModelEnv(): Record<string, string> {
+  const judge = getJudgeModel();
+  if (!judge) return {};
+  const env: Record<string, string> = {};
+  if (judge.apiKey) env[judge.provider.envVar] = judge.apiKey;
   return env;
 }
 

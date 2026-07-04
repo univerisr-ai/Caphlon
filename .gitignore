@@ -29,14 +29,14 @@ Dockerfile.prod
 .slim/deepwork/
 models/
 .slim/
-MiMo-Code-main/
+/MiMo-Code-main/
 core/LlamaFactory-main/
 core/hermes-agent-main/
 core/qualixar-os-main/
 core/conductor-main/
 core/flower-main/
 core/tokenless-main/
-open-design-main/
+/open-design-main/
 core/aider-main/
 core/opencode-main/
 core/flower-venv/

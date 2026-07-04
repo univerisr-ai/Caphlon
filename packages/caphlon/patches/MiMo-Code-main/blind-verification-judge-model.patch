@@ -1,0 +1,150 @@
+diff --git a/packages/opencode/src/config/config.ts b/packages/opencode/src/config/config.ts
+--- a/packages/opencode/src/config/config.ts
++++ b/packages/opencode/src/config/config.ts
+@@ -397,6 +397,10 @@
+         Schema.Struct({
+           candidates: Schema.optional(PositiveInt).annotate({
+             description: "Number of parallel reasoning candidates per step in max mode (default 5).",
++          }),
++          judgeModel: Schema.optional(Schema.String).annotate({
++            description:
++              'Separate model for the judge phase ("provider/model"). Blind verification: keeps the generator from approving its own work. Falls back to the step model when unset or unresolvable.',
+           }),
+         }),
+       ).annotate({
+diff --git a/packages/opencode/src/session/max-mode.ts b/packages/opencode/src/session/max-mode.ts
+--- a/packages/opencode/src/session/max-mode.ts
++++ b/packages/opencode/src/session/max-mode.ts
+@@ -67,6 +67,11 @@
+   /** Number of parallel candidates (default 5). */
+   candidates?: number
+   /**
++   * Blind verification: separate model for the judge call, so the generator
++   * model can't approve its own work. Falls back to `model` when unset.
++   */
++  judgeModel?: Provider.Model
++  /**
+    * Optional hook to surface progress to the UI during the (otherwise
+    * invisible) candidate + judge phases. Called with a short English label,
+    * or undefined to clear back to a plain busy state.
+@@ -267,7 +272,9 @@
+       user: input.user,
+       sessionID: input.sessionID,
+       parentSessionID: input.parentSessionID,
+-      model: input.model,
++      // Blind verification: an independent judge model when configured —
++      // the generator model must not approve its own candidates.
++      model: input.judgeModel ?? input.model,
+       agent: input.agent,
+       permission: input.permission,
+       system: [JUDGE_SYSTEM],
+diff --git a/packages/opencode/src/session/prompt.ts b/packages/opencode/src/session/prompt.ts
+--- a/packages/opencode/src/session/prompt.ts
++++ b/packages/opencode/src/session/prompt.ts
+@@ -3165,6 +3165,20 @@
+             const maxModeCfg = (yield* config.get()).experimental?.maxMode
+             const useMaxMode =
+               agent.name === MaxMode.MAX_MODE_AGENT && maxModeCfg !== undefined && format.type !== "json_schema"
++            // Blind verification: judge may run on a SEPARATE model so the
++            // generator can't approve its own work. Unresolvable → loud warn +
++            // fall back to the step model (never a silent behavior change).
++            const judgeModel = yield* Effect.gen(function* () {
++              if (!useMaxMode || !maxModeCfg?.judgeModel) return undefined
++              const parsed = Provider.parseModel(maxModeCfg.judgeModel)
++              const exit = yield* provider.getModel(parsed.providerID, parsed.modelID).pipe(Effect.exit)
++              if (Exit.isSuccess(exit)) return exit.value
++              yield* slog.warn("max-mode judge model not found; falling back to step model", {
++                judgeModel: maxModeCfg.judgeModel,
++                error: String(Cause.squash(exit.cause)),
++              })
++              return undefined
++            })
+ 
+             const processArgs = {
+               user: lastUser,
+@@ -3229,6 +3243,7 @@
+                   handle,
+                   llm,
+                   candidates: maxModeCfg?.candidates,
++                  judgeModel,
+                   setStatus: (message) =>
+                     status.set(sessionID, message ? { type: "busy", message } : { type: "busy" }),
+                 })
+diff --git a/packages/opencode/test/session/max-mode-judge-model.test.ts b/packages/opencode/test/session/max-mode-judge-model.test.ts
+--- /dev/null
++++ b/packages/opencode/test/session/max-mode-judge-model.test.ts
+@@ -0,0 +1,74 @@
++import { describe, expect, test } from "bun:test"
++import { Effect } from "effect"
++import * as Stream from "effect/Stream"
++import { judge, type Candidate, type MaxStepInput } from "../../src/session/max-mode"
++import type { LLM } from "../../src/session/llm"
++
++/**
++ * Blind verification: when `judgeModel` is set, the judge call must go to that
++ * SEPARATE model — the generator model must not approve its own candidates.
++ * When unset, behavior is unchanged (falls back to the step model).
++ */
++
++/** Mock LLM that records which model each stream call was given. */
++function captureLLM() {
++  const models: unknown[] = []
++  const llm = {
++    buildSystemArray: () => Effect.succeed([]),
++    stream: (input: { model: unknown }): Stream.Stream<LLM.Event, unknown> => {
++      models.push(input.model)
++      return Stream.fromIterable([
++        { type: "text-delta", text: "1" } as LLM.Event,
++        { type: "finish-step", finishReason: "stop", usage: { inputTokens: 1, outputTokens: 1 } } as LLM.Event,
++      ])
++    },
++  } as unknown as LLM.Interface
++  return { llm, models }
++}
++
++const GENERATOR_MODEL = { info: { id: "generator" } }
++const JUDGE_MODEL = { info: { id: "independent-judge" } }
++
++function input(llm: LLM.Interface, judgeModel?: unknown): MaxStepInput {
++  return {
++    handle: {} as any,
++    llm,
++    user: {} as any,
++    agent: {} as any,
++    model: GENERATOR_MODEL as any,
++    judgeModel: judgeModel as any,
++    sessionID: "ses_test",
++    system: [],
++    messages: [],
++    tools: {},
++  }
++}
++
++const candidates = [
++  { index: 0, reasoning: "", text: "a", toolCalls: [], finishReason: "stop" },
++  { index: 1, reasoning: "", text: "b", toolCalls: [], finishReason: "stop" },
++] as unknown as Candidate[]
++
++describe("max-mode judge model (blind verification)", () => {
++  test("judge uses the separate judgeModel when configured", async () => {
++    const { llm, models } = captureLLM()
++    const result = await Effect.runPromise(judge(input(llm, JUDGE_MODEL), candidates))
++    expect(result.pick).toBe(1)
++    expect(models).toHaveLength(1)
++    expect(models[0]).toBe(JUDGE_MODEL)
++  })
++
++  test("judge falls back to the step model when judgeModel unset", async () => {
++    const { llm, models } = captureLLM()
++    await Effect.runPromise(judge(input(llm), candidates))
++    expect(models).toHaveLength(1)
++    expect(models[0]).toBe(GENERATOR_MODEL)
++  })
++
++  test("single candidate short-circuits without any judge call (either model)", async () => {
++    const { llm, models } = captureLLM()
++    const result = await Effect.runPromise(judge(input(llm, JUDGE_MODEL), candidates.slice(0, 1)))
++    expect(result.pick).toBe(0)
++    expect(models).toHaveLength(0)
++  })
++})

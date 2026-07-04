@@ -31,6 +31,8 @@ interface ConnectOptions {
   key?: string;
   model?: string;
   baseUrl?: string;
+  /** Aktif model yerine kör-doğrulama judge modelini bağla (caphlon max için). */
+  judge?: boolean;
 }
 
 async function ask(question: string): Promise<string> {
@@ -124,18 +126,31 @@ export async function connectCommand(
 
   // 4. Persist selection
   const cfg = loadConfig();
-  cfg.providers[provider.id] = {
-    model,
-    baseUrl: options.baseUrl ?? cfg.providers[provider.id]?.baseUrl,
-  };
-  cfg.activeProvider = provider.id;
-  cfg.activeModel = model;
-  saveConfig(cfg);
+  if (!options.judge) {
+    cfg.providers[provider.id] = {
+      model,
+      baseUrl: options.baseUrl ?? cfg.providers[provider.id]?.baseUrl,
+    };
+    cfg.activeProvider = provider.id;
+    cfg.activeModel = model;
+    saveConfig(cfg);
+    console.log(
+      chalk.green(`\n✅ Bağlandı: ${chalk.bold(`${provider.id}/${model}`)} aktif model olarak ayarlandı.`),
+    );
+    console.log(chalk.gray('   "caphlon model" ile kontrol et, "caphlon run" ile kullan.\n'));
+    return;
+  }
 
+  // --judge: aktif modele DOKUNMADAN ayrı judge modelini bağla (kör doğrulama).
+  cfg.judgeProvider = provider.id;
+  cfg.judgeModel = model;
+  saveConfig(cfg);
   console.log(
-    chalk.green(`\n✅ Bağlandı: ${chalk.bold(`${provider.id}/${model}`)} aktif model olarak ayarlandı.`),
+    chalk.green(`\n⚖️  Judge bağlandı: ${chalk.bold(`${provider.id}/${model}`)} (kör doğrulama).`),
   );
-  console.log(chalk.gray('   "caphlon model" ile kontrol et, "caphlon run" ile kullan.\n'));
+  console.log(
+    chalk.gray('   caphlon max artık kazananı bu BAĞIMSIZ modelle seçer — üretici kendi işini onaylayamaz.\n'),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -206,6 +221,14 @@ export async function modelCommand(action: string | undefined, ref: string | und
   console.log(`   Sağlayıcı : ${cfg.activeProvider}`);
   console.log(`   Model     : ${cfg.activeModel}`);
   console.log(`   Anahtar   : ${hasKey ? chalk.green('✓ bağlı') : chalk.red('✖ eksik')}`);
+  if (cfg.judgeProvider && cfg.judgeModel) {
+    console.log(chalk.bold('\n⚖️  Judge Modeli (kör doğrulama — caphlon max)'));
+    console.log(`   Sağlayıcı : ${cfg.judgeProvider}`);
+    console.log(`   Model     : ${cfg.judgeModel}`);
+  } else {
+    console.log(chalk.gray('\n   Judge modeli yok — caphlon max judge\'ı aktif modelle çalışır.'));
+    console.log(chalk.gray('   Bağımsız doğrulama için:  caphlon connect <sağlayıcı> --judge'));
+  }
   console.log('');
 }
 
@@ -226,6 +249,10 @@ export async function disconnectCommand(providerArg: string): Promise<void> {
   if (cfg.activeProvider === provider.id) {
     cfg.activeProvider = null;
     cfg.activeModel = null;
+  }
+  if (cfg.judgeProvider === provider.id) {
+    cfg.judgeProvider = null;
+    cfg.judgeModel = null;
   }
   saveConfig(cfg);
   console.log(chalk.green(`✅ ${provider.name} bağlantısı kesildi (anahtar silindi).`));
