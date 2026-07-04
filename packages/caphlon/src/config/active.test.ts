@@ -17,7 +17,8 @@ import { getProvider } from './providers.js';
 const home = mkdtempSync(join(tmpdir(), 'caphlon-active-test-'));
 process.env.CAPHLON_HOME = home;
 
-const { aiderModelString, opencodeModelString, activeModelEnv } = await import('./active.js');
+const { aiderModelString, opencodeModelString, activeModelEnv, getJudgeModel, judgeModelEnv } =
+  await import('./active.js');
 const { setCredential } = await import('./store.js');
 
 function activeFor(providerId: string, model: string) {
@@ -80,6 +81,38 @@ test('activeModelEnv — bağlı model provider anahtarını + UNDERDOG_LLM_* de
   assert.equal(env.UNDERDOG_LLM_PROVIDER, 'anthropic');
   assert.equal(env.UNDERDOG_LLM_MODEL, 'claude-opus-4-8');
   assert.equal(env.CAPHLON_MODEL, 'claude-opus-4-8');
+});
+
+test('getJudgeModel — bağlanmamışsa null (judge = aktif model davranışına düşülür)', () => {
+  assert.equal(getJudgeModel(), null);
+  assert.deepEqual(judgeModelEnv(), {});
+});
+
+test('getJudgeModel + judgeModelEnv — ayrı judge modeli, kendi sağlayıcı anahtarıyla', async () => {
+  const { saveConfig, loadConfig } = await import('./store.js');
+  setCredential('groq', 'gsk_judge_key');
+  const cfg = loadConfig();
+  cfg.judgeProvider = 'groq';
+  cfg.judgeModel = 'llama-3.3-70b-versatile';
+  saveConfig(cfg);
+
+  const judge = getJudgeModel();
+  assert.equal(judge?.provider.id, 'groq');
+  assert.equal(judge?.model, 'llama-3.3-70b-versatile');
+  assert.equal(judge?.apiKey, 'gsk_judge_key');
+  assert.equal(opencodeModelString(judge!), 'groq/llama-3.3-70b-versatile');
+
+  // Judge farklı sağlayıcıda → anahtarı env'e ayrıca girmeli (aktif anthropic idi).
+  const env = judgeModelEnv();
+  assert.equal(env.GROQ_API_KEY, 'gsk_judge_key');
+});
+
+test('judge bağlıyken aktif model değişmez (bağımsız iki ayar)', async () => {
+  const { loadConfig } = await import('./store.js');
+  const cfg = loadConfig();
+  assert.equal(cfg.activeProvider, 'anthropic');
+  assert.equal(cfg.activeModel, 'claude-opus-4-8');
+  assert.equal(cfg.judgeProvider, 'groq');
 });
 
 test.after(() => {

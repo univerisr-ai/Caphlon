@@ -40,6 +40,14 @@ export interface CaphlonConfig {
   activeProvider: string | null;
   /** Active model id (within the active provider) */
   activeModel: string | null;
+  /**
+   * Kör doğrulama (blind verification) için AYRI judge modeli: `caphlon max`
+   * adayları aktif modelle üretir, kazananı BU model seçer — üretici kendi
+   * işini onaylayamaz. Ayarlanmamışsa judge aktif modelle çalışır (eski davranış).
+   */
+  judgeProvider: string | null;
+  /** Judge model id (judgeProvider içinde) */
+  judgeModel: string | null;
   /** Per-provider settings */
   providers: Record<string, ProviderSettings>;
 }
@@ -47,6 +55,8 @@ export interface CaphlonConfig {
 const DEFAULT_CONFIG: CaphlonConfig = {
   activeProvider: null,
   activeModel: null,
+  judgeProvider: null,
+  judgeModel: null,
   providers: {},
 };
 

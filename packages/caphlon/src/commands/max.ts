@@ -16,7 +16,13 @@
  */
 
 import chalk from 'chalk';
-import { getActiveModel, activeModelEnv, opencodeModelString } from '../config/active.js';
+import {
+  getActiveModel,
+  getJudgeModel,
+  activeModelEnv,
+  judgeModelEnv,
+  opencodeModelString,
+} from '../config/active.js';
 import { spawnInherit, notFound } from '../external.js';
 import { resolveMimoLauncher } from './compose.js';
 import { buildSkillPreamble } from '../config/skills.js';
@@ -41,8 +47,15 @@ export async function maxCommand(task: string, opts: { candidates?: string } = {
   const n = Math.max(2, parseInt(opts.candidates ?? '5', 10) || 5);
   const modelStr = opencodeModelString(active);
 
+  // Kör doğrulama: judge modeli bağlıysa kazananı O seçer (bağımsız), yoksa
+  // eski davranış (judge = aday modeli). caphlon connect <sağlayıcı> --judge.
+  const judge = getJudgeModel();
+  const judgeStr = judge ? opencodeModelString(judge) : null;
+
   // max-mode yalnızca experimental.maxMode tanımlıysa tetiklenir (prompt.ts:3167).
-  const cfg = JSON.stringify({ experimental: { maxMode: { candidates: n } } });
+  const cfg = JSON.stringify({
+    experimental: { maxMode: { candidates: n, ...(judgeStr ? { judgeModel: judgeStr } : {}) } },
+  });
 
   // AKTİF skill enjeksiyonu (görev varsa): top-K tam SKILL.md'yi prompt'a göm.
   const { prompt, used } = task.trim() ? buildSkillPreamble(task.trim()) : { prompt: '', used: [] };
@@ -54,13 +67,18 @@ export async function maxCommand(task: string, opts: { candidates?: string } = {
 
   console.log(chalk.bold(`\n🏆 Caphlon Max — ${chalk.cyan(modelStr)}  (best-of-${n} + judge)`));
   console.log(chalk.gray('   Her adımda N aday üretilir, judge en iyisini seçer → sadece kazanan yürütülür'));
+  if (judgeStr) {
+    console.log(chalk.green(`   ⚖️  Kör doğrulama: judge = ${chalk.bold(judgeStr)} (bağımsız model)`));
+  } else {
+    console.log(chalk.gray('   Judge = aday modeli. Bağımsız judge için: caphlon connect <sağlayıcı> --judge'));
+  }
   if (used.length) console.log(chalk.green(`   🧩 ${used.length} skill aktif enjekte edildi: ${used.join(', ')}`));
   console.log(chalk.gray('   caphlon connect ile bağlı model kullanılıyor\n'));
 
   spawnInherit(
     launcher.cmd,
     args,
-    { ...activeModelEnv(), MIMOCODE_CONFIG_CONTENT: cfg },
+    { ...activeModelEnv(), ...judgeModelEnv(), MIMOCODE_CONFIG_CONTENT: cfg },
     launcher.cwd,
   );
 }

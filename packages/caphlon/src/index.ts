@@ -187,12 +187,14 @@ Examples:
     .option('-k, --key <apiKey>', 'API key (etkileşimsiz)')
     .option('-m, --model <model>', 'Model id')
     .option('--base-url <url>', 'Özel base URL (proxy/self-host)')
+    .option('--judge', 'Aktif model yerine kör-doğrulama judge modelini bağla (caphlon max)')
     .addHelpText('after', `
 Örnekler:
   caphlon connect                            Sihirbaz: sağlayıcı → key → model
   caphlon connect anthropic                  Anthropic için anahtar sor
   caphlon connect openai --key sk-... --model gpt-4o
   caphlon connect ollama                     Yerel model (anahtar gerekmez)
+  caphlon connect groq --judge               Kör doğrulama: max judge'ı için AYRI model
 `)
     .action(async (provider, options) => {
       await connectCommand(provider, options);
@@ -389,6 +391,9 @@ Examples:
   caphlon max "kullanıcı auth'u olan REST API yaz"   5 aday + judge
   caphlon max -n 3 "şu bug'ı bul ve düzelt"           3 aday
   caphlon max                                          etkileşimli (max agent)
+
+Kör doğrulama: caphlon connect <sağlayıcı> --judge ile AYRI bir judge modeli
+bağlarsan kazananı o bağımsız model seçer (üretici kendi işini onaylayamaz).
 `)
     .action(async (task: string[], options) => {
       await maxCommand((task ?? []).join(' '), options);
