@@ -113,21 +113,24 @@ Sağlıklı sistemde onarımı atlar; hatada exit 1. **Done ✓:** sağlıklı s
   kanalı) karıştırıyordu. **Done ✓ (küçük parça):** `caphlon doctor` artık
   platforma özgü mikrofon kaydedici (sox/rec/arecord) varlığını bilgilendirici
   olarak kontrol ediyor.
-  **Kalan — doğrulandı, gerçekten büyük/riskli (2026-07-05 araştırması):**
-  Xiaomi kimlik doğrulaması düz bir API key DEĞİL — `plugin/mimo.ts` X25519+
-  AES-256-GCM ile şifrelenmiş bir tarayıcı/OAuth exchange'i yürütüyor, sonuç
-  `{key, metadata:{uid, base_url}}` olarak MiMo'nun kendi `auth.json`'ına
-  yazılıyor. Caphlon'un `caphlon connect` modeli (sabit `envVar` → düz env
-  injection, `credentials.enc`) bu formatla eşleşmiyor; kullanıcı da bir
-  Xiaomi API key'ini elle kopyalayıp yapıştıramaz. Basit bir "xiaomi
-  provider ekle" PR'ı ÇALIŞMAZ — sessizce yarı-bağlı bir özellik doğurur.
-  Gerçek çözüm iki yoldan biri: (a) Caphlon `credentials.enc`'te key+base_url+uid
-  saklayıp MiMo alt sürecine `MIMOCODE_AUTH_CONTENT` env var'ı (JSON) olarak
-  enjekte etsin — ama bu yol MiMo'da yalnızca bir fallback olarak var,
-  resmî/dokümante bir arayüz değil, önce doğrulanmalı; (b) kullanıcının MiMo
-  TUI'de `/login`→xiaomi OAuth'unu bir kez kendi başına tamamlamasına güvenip
-  Caphlon hiç dokunmasın. Bilinçli olarak ERTELENDİ. Qualixar OS'a "voice
-  channel" olarak taşımak ise tamamen ayrı bir mimari tasarım kararı.
+  **Xiaomi köprüsü — araştırıldı, KAPATILDI (2026-07-05):** `MIMOCODE_AUTH_CONTENT`
+  env var'ı gerçek/canlı bir kod yolu (`auth/index.ts:59-62`, MiMo'nun kendi
+  `control-plane/workspace.ts`'i alt-workspace'lere kimlik aktarırken kullanıyor;
+  `plugin/mimo.ts:101-104` beklenen `{type:"api", key, metadata:{base_url}}`
+  şeklini de doğruladı) — mekanizmanın kendisi güvenilir. Ama asıl engel bu
+  değil: Xiaomi bir API key'i kopyala-yapıştır olarak vermiyor, anahtar
+  (`result.sk`) yalnızca tarayıcıda ECDH+AES-GCM şifreli bir OAuth exchange'i
+  tamamlandığında ortaya çıkıyor (`plugin/mimo.ts:170-186`). Caphlon'un bu
+  anahtarı ORİJİNAL olarak üretmesinin iki yolu var, ikisi de kabul edilemez:
+  (a) Xiaomi'nin OAuth/ECDH akışını kendi başına yeniden uygulamak → no-rewrite
+  ilkesini doğrudan ihlal eder; (b) MiMo'nun kendi `auth.json`'ından (özel iç
+  durumu, `Global.Path.data`) anahtarı okuyup kopyalamak → dokümante olmayan
+  bir iç dosya biçimine/konumuna kırılgan bağımlılık yaratır. Üstelik hiçbiri
+  gerekli de değil: kullanıcı `caphlon ui` içinde bir kez `/login`→xiaomi
+  yapınca MiMo zaten kendi `auth.json`'ını okuyup voice'u çalıştırıyor — köprü
+  yalnızca kozmetik bir kazanım (`caphlon status`'ta görünürlük) için kırılgan
+  bir bağımlılık ekler. **Karar: yapılmayacak.** Qualixar OS'a "voice channel"
+  olarak taşımak ise tamamen ayrı bir mimari tasarım kararı, bu maddenin dışında.
 - **P2-4 · Open Design Desktop** (GAP #4): native app entegrasyonu — ayrı epik.
 - **P2-5 · `.env.example` ↔ `connect`** tutarlılık denetimi + `caphlon status` zenginleştirme.
 
