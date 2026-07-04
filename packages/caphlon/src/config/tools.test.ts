@@ -45,7 +45,7 @@ test('claude: link — mevcut ayarları korur (merge, overwrite değil)', () => 
   rmSync(claude.configPath(), { force: true });
 });
 
-test('claude: unlink — yedekten geri yükler (link öncesi tam duruma döner)', () => {
+test('claude: unlink — caphlon anahtarlarının link-öncesi değerlerini yedekten geri getirir', () => {
   const claude = getAdapter('claude')!;
   const original = { env: { SOME_OTHER_VAR: 'kept', ANTHROPIC_MODEL: 'user-had-this-already' }, custom: true };
   writeFileSync(claude.configPath(), JSON.stringify(original));
@@ -54,7 +54,27 @@ test('claude: unlink — yedekten geri yükler (link öncesi tam duruma döner)'
   claude.unlink();
   assert.equal(claude.isLinked(), false);
   const restored = JSON.parse(readFileSync(claude.configPath(), 'utf8'));
-  assert.deepEqual(restored, original, 'unlink sonrası dosya link-öncesi haliyle BİREBİR aynı olmalı');
+  assert.deepEqual(restored, original, 'unlink sonrası dosya link-öncesi haliyle aynı olmalı');
+  rmSync(claude.configPath(), { force: true });
+});
+
+test('claude: unlink — link SONRASI yapılan ilgisiz değişiklikleri SİLMEZ (yedek bütün halinde geri yüklenmez)', () => {
+  // ~/.claude/settings.json canlı bir dosya: link'ten sonra Claude Code'un
+  // kendisi de yazar (izinler vb.). unlink eski yedeği olduğu gibi kopyalarsa
+  // link-sonrası her şey kaybolur — anahtar-düzeyi geri yükleme bunu önler.
+  const claude = getAdapter('claude')!;
+  rmSync(`${claude.configPath()}.caphlon-bak`, { force: true });
+  writeFileSync(claude.configPath(), JSON.stringify({ env: { ANTHROPIC_MODEL: 'pre-link-value' } }));
+  claude.link(GATEWAY, MODEL);
+  // link'ten SONRA dosyaya (Claude Code'un yapacağı gibi) yeni bir alan eklendi:
+  const cfg = JSON.parse(readFileSync(claude.configPath(), 'utf8'));
+  cfg.permissions = { allow: ['Bash(npm test)'] };
+  writeFileSync(claude.configPath(), JSON.stringify(cfg));
+  claude.unlink();
+  const after = JSON.parse(readFileSync(claude.configPath(), 'utf8'));
+  assert.deepEqual(after.permissions, { allow: ['Bash(npm test)'] }, 'link-sonrası eklenen alan korunmalı');
+  assert.equal(after.env.ANTHROPIC_MODEL, 'pre-link-value', 'link-öncesi değer geri gelmeli');
+  assert.equal(after.env.ANTHROPIC_BASE_URL, undefined, 'caphlon anahtarı silinmeli');
   rmSync(claude.configPath(), { force: true });
 });
 
@@ -80,7 +100,8 @@ test('opencode: link + unlink — provider.caphlon eklenir/kaldırılır, diğer
   opencode.unlink();
   assert.equal(opencode.isLinked(), false);
   cfg = JSON.parse(readFileSync(opencode.configPath(), 'utf8'));
-  assert.deepEqual(cfg, { provider: { anthropic: { npm: 'x' } } }, 'unlink sonrası link-öncesi hale dönmeli');
+  assert.deepEqual(cfg.provider, { anthropic: { npm: 'x' } }, 'provider bölümü link-öncesi hale dönmeli');
+  // link()'in eklediği $schema kalabilir — zararsız, davranışı değiştirmez.
   rmSync(opencode.configPath(), { force: true });
 });
 

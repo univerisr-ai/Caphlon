@@ -49,20 +49,19 @@ function backupOnce(file: string): void {
 }
 
 /**
- * link() öncesi hale gerçekten geri dön. Önceki unlink() implementasyonları
- * `.caphlon-bak` hiç okumuyordu — sadece bilinen caphlon anahtarlarını elle
- * siliyordu, bu yüzden kullanıcının link'ten ÖNCE aynı anahtarlarda (örn.
- * ANTHROPIC_MODEL) zaten bir değeri varsa o kayboluyordu. Yedek varsa ondan
- * tam geri yükle (ve tüket — bir sonraki link() taze bir yedek alsın).
- * Yedek yoksa (dosya caphlon tarafından sıfırdan oluşturulmuşsa) çağıran
- * kendi sürgün-temizleme mantığına düşer.
+ * Yedeği oku ve tüket (bir sonraki link() taze bir yedek alsın). Yedek yoksa
+ * null döner. DİKKAT: yedek BÜTÜN halinde geri yüklenmez — bu dosyalar canlı
+ * (örn. ~/.claude/settings.json'a Claude Code kendisi de yazar); eski yedeği
+ * olduğu gibi kopyalamak link'ten SONRA yapılan tüm değişiklikleri silerdi.
+ * Bunun yerine çağıran, SADECE caphlon'un dokunduğu anahtarları yedekteki
+ * link-öncesi değerlerine döndürür (anahtar-düzeyi geri yükleme).
  */
-function restoreBackup(file: string): boolean {
+function consumeBackup(file: string): Record<string, any> | null {
   const bak = `${file}.caphlon-bak`;
-  if (!existsSync(bak)) return false;
-  copyFileSync(bak, file);
+  if (!existsSync(bak)) return null;
+  const data = readJson(bak);
   rmSync(bak);
-  return true;
+  return data;
 }
 
 function readJson(file: string): Record<string, any> {
@@ -107,7 +106,7 @@ const claudeAdapter: ToolAdapter = {
   },
   unlink() {
     const file = this.configPath();
-    if (restoreBackup(file)) return;
+    const bak = consumeBackup(file);
     const cfg = readJson(file);
     if (cfg.env) {
       for (const k of [
@@ -117,7 +116,10 @@ const claudeAdapter: ToolAdapter = {
         'ANTHROPIC_SMALL_FAST_MODEL',
         'CAPHLON_LINKED',
       ]) {
-        delete cfg.env[k];
+        // Kullanıcının link-ÖNCESİ değeri varsa geri getir, yoksa sil.
+        const prev = bak?.env?.[k];
+        if (prev !== undefined) cfg.env[k] = prev;
+        else delete cfg.env[k];
       }
       if (Object.keys(cfg.env).length === 0) delete cfg.env;
     }
@@ -151,7 +153,9 @@ const opencodeAdapter: ToolAdapter = {
   },
   unlink() {
     const file = this.configPath();
-    if (restoreBackup(file)) return;
+    // link() burada hiçbir mevcut değeri ezmez (yalnızca provider.caphlon
+    // ekler) → cerrahi silme tam geri dönüştür; yedek sadece tüketilir.
+    consumeBackup(file);
     const cfg = readJson(file);
     if (cfg.provider?.caphlon) {
       delete cfg.provider.caphlon;
@@ -194,7 +198,9 @@ const codexAdapter: ToolAdapter = {
   },
   unlink() {
     const file = this.configPath();
-    if (restoreBackup(file)) return;
+    // link() kendi işaretli bloğu dışında hiçbir şeyi değiştirmez →
+    // stripBlock tam geri dönüştür; yedek sadece tüketilir.
+    consumeBackup(file);
     if (!existsSync(file)) return;
     writeFileSync(file, stripBlock(readFileSync(file, 'utf8')));
   },

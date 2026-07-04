@@ -75,7 +75,8 @@ fi
 
 echo
 say "Yerel yamalar (packages/caphlon/patches/*) uygulanıyor"
-bash "$ROOT/scripts/apply-patches.sh"
+# Tutmayan yama kurulumu kesmesin ama sesli kalsın (script kendisi uyarır).
+bash "$ROOT/scripts/apply-patches.sh" || warn "Bazı yamalar uygulanamadı — yukarıdaki uyarılara bakın."
 
 echo
 say "Doğrulama: caphlon doctor"

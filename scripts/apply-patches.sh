@@ -42,8 +42,16 @@ for tool_dir in "$PATCH_ROOT"/*/; do
     if ( cd "$target" && patch -p1 -N --dry-run --silent < "$patch" ) >/dev/null 2>&1; then
       ( cd "$target" && patch -p1 -N --silent < "$patch" )
       ok "$name: $patch_name uygulandı"
-    else
+    elif ( cd "$target" && patch -p1 -R --dry-run --silent < "$patch" ) >/dev/null 2>&1; then
+      # Tersine uygulanabiliyor → gerçekten zaten uygulanmış.
       say "$name: $patch_name zaten uygulanmış — atlandı"
+    else
+      # Ne düz ne ters uygulanabiliyor → kaynak değişmiş, yama TUTMUYOR.
+      # Sessiz geçme: yoksa "uygulandı sanılan ama kayıp" bir düzeltme doğar.
+      warn "$name: $patch_name UYGULANAMADI (kaynak değişmiş olabilir) — yamayı güncelle!"
+      FAILED=1
     fi
   done
 done
+
+exit "${FAILED:-0}"
