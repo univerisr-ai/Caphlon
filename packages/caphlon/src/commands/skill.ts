@@ -223,8 +223,30 @@ async function evolveCmd(tracePath: string, opts: { yes?: boolean }): Promise<vo
     body: candidate.body,
     createdAt: nowIso(),
   });
-  console.log(chalk.green(`\n✓ Skill kaydedildi (learned):\n  ${path}\n`));
-  console.log(chalk.gray('  Paylaş:  caphlon skill sync push <owner/repo>\n'));
+  console.log(chalk.green(`\n✓ Skill kaydedildi (learned):\n  ${path}`));
+
+  // Living Marketplace halkası (P2-2): uzak depo zaten yapılandırılmışsa
+  // onaylı skill'i paylaşmayı öner (dışa yayın = onaysız asla; --yes bile
+  // burada sormaz, otomatik push YOK — yayın ayrı bir insan kararıdır).
+  const remote = syncStatus().remote;
+  if (remote && !opts.yes) {
+    const rl = createInterface({ input: stdin, output: stdout });
+    const share = (await rl.question(chalk.bold(`  Uzak depoya da paylaşılsın mı? (${remote}) [y/N]: `)))
+      .trim()
+      .toLowerCase();
+    rl.close();
+    if (share === 'y' || share === 'yes' || share === 'e' || share === 'evet') {
+      try {
+        const r = syncPush(undefined, nowIso());
+        console.log(chalk.green(`  ✓ Paylaşıldı: ${r.pushed} learned skill → ${r.remote}`));
+      } catch (e) {
+        console.error(chalk.red(`  ✖ Push başarısız: ${(e as Error).message}`));
+      }
+    }
+  } else if (!remote) {
+    console.log(chalk.gray('  Paylaş:  caphlon skill sync push <owner/repo>'));
+  }
+  console.log('');
 }
 
 function syncStatusCmd(): void {

@@ -30,10 +30,18 @@ function resolveBinary(): string | null {
 export async function tokenlessCommand(args: string[]): Promise<void> {
   const bin = resolveBinary();
   if (!bin) {
-    notFound('tokenless', [
-      'cargo install tokenless',
-      'veya bundled sürüm: cd core/tokenless-main && make install',
-    ]);
+    // P2-1: cargo yoksa kullanıcıyı ikinci bir duvara çarptırma — ön koşulu söyle.
+    const hasCargo = onPath('cargo');
+    notFound(
+      'tokenless',
+      hasCargo
+        ? ['cargo install tokenless', 'veya bundled sürüm: cd core/tokenless-main && cargo build --release']
+        : [
+            'Rust toolchain gerekli (cargo bulunamadı) → https://rustup.rs',
+            'kurulumdan sonra: cargo install tokenless',
+            'tokenless OPSİYONELDİR — kurmadan da tüm diğer caphlon komutları çalışır',
+          ],
+    );
     return;
   }
 
