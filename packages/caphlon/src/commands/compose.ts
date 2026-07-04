@@ -13,7 +13,13 @@
 
 import { join } from 'node:path';
 import chalk from 'chalk';
-import { getActiveModel, activeModelEnv, opencodeModelString } from '../config/active.js';
+import {
+  getActiveModel,
+  getJudgeModel,
+  activeModelEnv,
+  judgeModelEnv,
+  opencodeModelString,
+} from '../config/active.js';
 import { findBun, firstExisting, onPath, spawnInherit, notFound, projectRoot } from '../external.js';
 import { buildSkillPreamble } from '../config/skills.js';
 
@@ -116,9 +122,21 @@ async function launchMimo(extraArgs: string[], agent: string): Promise<void> {
   const modelStr = opencodeModelString(active);
   const args = [...launcher.baseArgs, '--model', modelStr, '--agent', agent, '--trust', ...extraArgs];
   console.log(chalk.bold(`🐙 MiMo Compose — ${chalk.cyan(modelStr)}`));
+
+  // Kör doğrulama: judge modeli bağlıysa MiMo'nun goal stop-condition gate'i
+  // (erken durma yargıcı) bu BAĞIMSIZ modelle karar verir — çalışan model
+  // kendi "bitti" beyanını onaylayamaz. Bağlı değilse eski davranış.
+  const judge = getJudgeModel();
+  const env: Record<string, string> = { ...activeModelEnv(), ...judgeModelEnv() };
+  if (judge) {
+    env.MIMOCODE_CONFIG_CONTENT = JSON.stringify({
+      experimental: { judgeModel: opencodeModelString(judge) },
+    });
+    console.log(chalk.green(`   ⚖️  Kör doğrulama: judge = ${chalk.bold(opencodeModelString(judge))} (bağımsız)`));
+  }
   console.log(chalk.gray('   caphlon connect ile bağlı model kullanılıyor\n'));
 
-  spawnInherit(launcher.cmd, args, activeModelEnv(), launcher.cwd);
+  spawnInherit(launcher.cmd, args, env, launcher.cwd);
 }
 
 function handleComposeList(): void {
