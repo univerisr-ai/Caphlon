@@ -771,7 +771,6 @@ index a58a8cf..a0e2f17 100644
  
  export const go = {
 diff --git a/packages/tui/src/routes/home.tsx b/packages/tui/src/routes/home.tsx
-index d4145e2..3727bf1 100644
 --- a/packages/tui/src/routes/home.tsx
 +++ b/packages/tui/src/routes/home.tsx
 @@ -1,6 +1,8 @@
@@ -785,7 +784,7 @@ index d4145e2..3727bf1 100644
  import { useSync } from "../context/sync"
  import { Toast } from "../ui/toast"
  import { useArgs } from "../context/args"
-@@ -15,7 +17,7 @@ import { HomeSessionDestinationProvider } from "./home/session-destination"
+@@ -15,7 +17,7 @@
  
  let once = false
  const placeholder = {
@@ -794,7 +793,7 @@ index d4145e2..3727bf1 100644
    shell: ["ls -la", "git status", "pwd"],
  }
  
-@@ -27,10 +29,12 @@ export function Home() {
+@@ -27,10 +29,12 @@
    const [ref, setRef] = createSignal<PromptRef | undefined>()
    const args = useArgs()
    const local = useLocal()
@@ -808,7 +807,7 @@ index d4145e2..3727bf1 100644
      const configured = tuiConfig.prompt?.max_width
      if (configured === "auto") return Math.max(75, Math.floor(dimensions().width * 0.7))
      return configured ?? 75
-@@ -69,24 +73,68 @@ export function Home() {
+@@ -69,24 +73,73 @@
  
    return (
      <HomeSessionDestinationProvider>
@@ -845,12 +844,14 @@ index d4145e2..3727bf1 100644
 +
 +      {/* ORTA — ahtapot arka plan + CAPHLON, boşluğu doldurur */}
 +      <box flexGrow={1} minHeight={0} alignItems="center" justifyContent="center" paddingLeft={2} paddingRight={2}>
++        {/* Arka plan SADECE bu orta bölgeyi kaplar — tam terminal boyu verilirse
++            alt durum çubuğunun/footer'ın içinden desen sızar. */}
 +        <box
 +          position="absolute"
 +          left={0}
 +          top={0}
-+          width={dimensions().width}
-+          height={dimensions().height}
++          width="100%"
++          height="100%"
 +          zIndex={0}
 +          alignItems="center"
 +          justifyContent="center"
@@ -860,7 +861,7 @@ index d4145e2..3727bf1 100644
 +        {/* CAPHLON yazısı + HEMEN ALTINDA prompt — daraltılmış, ortalanmış */}
 +        <box
 +          flexShrink={0}
-+          zIndex={1000}
++          zIndex={10}
 +          alignItems="center"
 +          gap={1}
 +          width={Math.min(96, Math.max(48, Math.floor(dimensions().width * 0.5)))}
@@ -868,7 +869,10 @@ index d4145e2..3727bf1 100644
            <pluginRuntime.Slot name="home_logo" mode="replace">
              <Logo />
            </pluginRuntime.Slot>
-+          <box width="100%">
++          {/* Prompt, logodan YÜKSEK z-index'te ayrı bir katmanda: "/" komut
++              listesi yukarı doğru açılınca CAPHLON yazısının ÜSTÜNE biner —
++              aynı katmandalarsa logo menünün içinden görünür (yazılar karışır). */}
++          <box width="100%" zIndex={2000}>
 +            <pluginRuntime.Slot name="home_prompt" mode="replace" ref={bind}>
 +              <Prompt ref={bind} right={<pluginRuntime.Slot name="home_prompt_right" />} placeholders={placeholder} />
 +            </pluginRuntime.Slot>
