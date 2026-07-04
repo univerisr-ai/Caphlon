@@ -79,6 +79,7 @@ caphlon dev          # Agent + dashboard başlat
 caphlon run "..."    # Task çalıştır
 caphlon design       # Tasarım pipeline'ı
 caphlon compose      # Compose workflow (8 aşama)
+caphlon skill        # Skill deposu: list/add/search/show/learn/evolve/sync
 caphlon status       # Sistem durumu
 caphlon doctor       # Tanılama
 caphlon init         # Proje başlat
@@ -115,6 +116,14 @@ Güç katmanları: **öz-topluluk** (tek kullanıcı, anında) · **swarm konsen
 (çok kullanıcı, anında) · **ortak çözüm önbelleği** (N kullanıcı = N× hafıza) ·
 **federated LoRA** (biriken). Güvenlik: validator + itibar + honeypot + anomali
 eleme. Gizlilik: ham veri makineden çıkmaz, yalnızca ağırlık farkı paylaşılır.
+
+**Living Marketplace — öğrenilen dersler paylaşılır:** `caphlon skill evolve`
+bir görev izinden (trace) aday bir skill çıkarır → **bağımsız** bir judge
+onaylar → onaylanan ders `learned/`e yazılır. `caphlon skill sync push
+<owner/repo>` bu dersleri bir git reposuna gönderir; başka bir kullanıcı
+`caphlon skill sync pull` ile onaysız hiçbir şey çalıştırmadan aynı dersleri
+çeker (git shell-out — kendi dağıtım protokolümüz yok). Yayın her zaman ayrı
+bir insan onayı gerektirir; `--yes` bile otomatik push yapmaz.
 
 ### ⚖️ Dürüst değerlendirme — gerçek ölçümler
 
