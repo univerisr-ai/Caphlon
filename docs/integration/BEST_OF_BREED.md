@@ -18,7 +18,7 @@
 | **Open Design** (`open-design-main`) | 100+ tasarım skill'i, marka sistemleri, HTML→MP4 | `caphlon design` | `od` daemon (port 7456) / MCP köprüsü |
 | **Hermes Agent** (`core/hermes-agent-main`) | Kendi kendine öğrenme, batch trajectory üretimi | (eğitim hattı) | `core/hermes_flower_bridge.py` → `hermes` CLI |
 | **Flower** (`core/flower-main`) | Federated learning (SuperLink/SuperNode) | (eğitim hattı) | Hermes'ten gelen veriyle federated client |
-| **tokenless** (`core/tokenless-main`) | Token sıkıştırma / maliyet optimizasyonu | token optimizer | `project_underdog/token_optimizer/plugin.py` |
+| **tokenless** (`core/tokenless-main`) | Token sıkıştırma / maliyet optimizasyonu | `caphlon tokenless` | `commands/tokenless.ts` → gerçek `tokenless` binary'sini spawn eder |
 
 ---
 

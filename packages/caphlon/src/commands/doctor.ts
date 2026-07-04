@@ -5,7 +5,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { findQosDir, findOpenDesignDir, findProjectRoot, checkOpenDesign } from '../qos-bridge.js';
+import { findQosDir, findOpenDesignDir, findProjectRoot, checkOpenDesign, resolveNodeForQos } from '../qos-bridge.js';
 import { onPath, findBun, findPython, firstExisting, projectRoot as root } from '../external.js';
 import { tokenlessAvailable } from './tokenless.js';
 import { resolveMimoLauncher } from './compose.js';
@@ -52,6 +52,25 @@ function qosRunnable(qosDir: string | null): { ready: boolean; detail: string } 
   if (built && installed) return { ready: true, detail: qosDir };
   const missing = [!installed && 'node_modules', !built && 'dist'].filter(Boolean).join(' + ');
   return { ready: false, detail: `${missing} eksik → make setup-cores (veya cd ${qosDir} && npm install && npm run build)` };
+}
+
+/**
+ * Qualixar OS'un native better-sqlite3'ü GERÇEKTEN import edilebiliyor mu?
+ * `dist/` + `node_modules` varlığı yetmez — Node major sürümü değişince
+ * (örn. brew node güncellemesi) prebuild ABI'si (NODE_MODULE_VERSION) eskiyle
+ * uyuşmaz ve qos'un TÜM test suite'i (ve `run`) sessizce patlar. `caphlon run`
+ * ile AYNI Node'u (`resolveNodeForQos`) kullanarak gerçek bir require dener.
+ */
+function qosNativeDepsOk(qosDir: string): { ok: boolean; detail: string } {
+  const r = spawnSync(resolveNodeForQos(), ['-e', "require('better-sqlite3')"], {
+    cwd: qosDir,
+    stdio: 'ignore',
+  });
+  if (r.status === 0) return { ok: true, detail: 'better-sqlite3 ABI uyumlu' };
+  return {
+    ok: false,
+    detail: `better-sqlite3 ABI uyumsuz → cd ${qosDir} && npm rebuild better-sqlite3 (veya make setup-cores)`,
+  };
 }
 
 /** Open Design daemon derlenmiş mi? `od` bundled yolu dist/cli.js ister. */
@@ -123,6 +142,17 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
     status: qos.ready ? '✅' : '❌',
     detail: qos.detail,
   });
+
+  // Sadece kurulu/derlenmişse anlamlı — inşa edilmemiş bir qos'ta native
+  // deps kontrolü zaten üstteki kontrolde yakalanır.
+  if (qos.ready && qosDir) {
+    const native = qosNativeDepsOk(qosDir);
+    results.push({
+      check: 'Qualixar OS (native deps)',
+      status: native.ok ? '✅' : '❌',
+      detail: native.detail,
+    });
+  }
 
   // Open Design
   const odDir = findOpenDesignDir();
