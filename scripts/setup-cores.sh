@@ -74,5 +74,9 @@ else
 fi
 
 echo
+say "Yerel yamalar (packages/caphlon/patches/*) uygulanıyor"
+bash "$ROOT/scripts/apply-patches.sh"
+
+echo
 say "Doğrulama: caphlon doctor"
 node packages/caphlon/bin/caphlon.js doctor || true
