@@ -107,7 +107,17 @@ Sağlıklı sistemde onarımı atlar; hatada exit 1. **Done ✓:** sağlıklı s
 - **P2-2 · Living Marketplace** (GAP #3): evolved skill'lerin yayınlanması — Faz 1 sync üstüne.
   **Done ✓:** `caphlon skill sync push/pull` (git shell-out) `skill evolve` akışına bağlı;
   `config/skills.test.ts` gerçek yerel git remote ile push/pull'u doğrular.
-- **P2-3 · MiMo Voice** (GAP #5): `/voice` ASR'ı Qualixar'a taşı.
+- **P2-3 · MiMo Voice** (GAP #5): `/voice` zaten MiMo Code'un içinde gerçek ve
+  çalışan bir özellik (`caphlon ui` bunu miras alır) — "Qualixar'a taşı" yanlış
+  çerçevelemeydi, iki farklı katmanı (TUI-lokal ses girişi vs orkestrasyon
+  kanalı) karıştırıyordu. **Done ✓ (küçük parça):** `caphlon doctor` artık
+  platforma özgü mikrofon kaydedici (sox/rec/arecord) varlığını bilgilendirici
+  olarak kontrol ediyor. **Kalan (ayrı, daha büyük epik):** Xiaomi/MiMo
+  kimlik doğrulaması TUI'nin kendi `/login` akışıyla yapılıyor — `caphlon
+  connect` üzerinden genel bir "xiaomi" sağlayıcısı eklemek, bu akışın gerçekte
+  nasıl çalıştığı doğrulanmadan yapılırsa yarı-bağlı (görünüşte tam, aslında
+  çalışmayan) bir özellik riski taşır; bilinçli olarak ertelendi. Qualixar OS'a
+  "voice channel" olarak taşımak ise ayrı bir mimari tasarım kararı.
 - **P2-4 · Open Design Desktop** (GAP #4): native app entegrasyonu — ayrı epik.
 - **P2-5 · `.env.example` ↔ `connect`** tutarlılık denetimi + `caphlon status` zenginleştirme.
 
