@@ -53,8 +53,10 @@ export async function maxCommand(task: string, opts: { candidates?: string } = {
   const judgeStr = judge ? opencodeModelString(judge) : null;
 
   // max-mode yalnızca experimental.maxMode tanımlıysa tetiklenir (prompt.ts:3167).
+  // judgeModel GENEL anahtarda: max-mode judge'ı VE goal stop-condition gate'i
+  // aynı bağımsız modeli kullanır (MiMo yaması: blind-verification-judge-model).
   const cfg = JSON.stringify({
-    experimental: { maxMode: { candidates: n, ...(judgeStr ? { judgeModel: judgeStr } : {}) } },
+    experimental: { ...(judgeStr ? { judgeModel: judgeStr } : {}), maxMode: { candidates: n } },
   });
 
   // AKTİF skill enjeksiyonu (görev varsa): top-K tam SKILL.md'yi prompt'a göm.

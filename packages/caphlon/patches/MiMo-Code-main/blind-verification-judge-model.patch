@@ -1,17 +1,76 @@
 diff --git a/packages/opencode/src/config/config.ts b/packages/opencode/src/config/config.ts
 --- a/packages/opencode/src/config/config.ts
 +++ b/packages/opencode/src/config/config.ts
-@@ -397,6 +397,10 @@
+@@ -392,11 +392,19 @@
+       predict_next_prompt: Schema.optional(Schema.Boolean).annotate({
+         description:
+           "Predict the user's likely next prompt after each turn and show it as inline ghost text (Tab to accept). Enabled by default; set to false to disable.",
++      }),
++      judgeModel: Schema.optional(Schema.String).annotate({
++        description:
++          'Independent model for LLM-as-judge phases ("provider/model"): the goal stop-condition gate, and the max-mode judge unless maxMode.judgeModel overrides it. Blind verification — the working model must not approve its own work. Falls back to the session/step model when unset or unresolvable.',
+       }),
+       maxMode: Schema.optional(
          Schema.Struct({
            candidates: Schema.optional(PositiveInt).annotate({
              description: "Number of parallel reasoning candidates per step in max mode (default 5).",
 +          }),
 +          judgeModel: Schema.optional(Schema.String).annotate({
 +            description:
-+              'Separate model for the judge phase ("provider/model"). Blind verification: keeps the generator from approving its own work. Falls back to the step model when unset or unresolvable.',
++              'Separate model for the judge phase ("provider/model"). Blind verification: keeps the generator from approving its own work. Overrides experimental.judgeModel for max mode; falls back to the step model when unset or unresolvable.',
            }),
          }),
        ).annotate({
+diff --git a/packages/opencode/src/session/goal.ts b/packages/opencode/src/session/goal.ts
+--- a/packages/opencode/src/session/goal.ts
++++ b/packages/opencode/src/session/goal.ts
+@@ -1,4 +1,4 @@
+-import { Effect, Layer, Context, Option } from "effect"
++import { Effect, Layer, Context, Option, Exit, Cause } from "effect"
+ import { generateObject, streamObject, type ModelMessage } from "ai"
+ import z from "zod"
+ import * as OtelTracer from "@effect/opentelemetry/Tracer"
+@@ -147,14 +147,37 @@
+       model: { providerID: ProviderID; modelID: ModelID }
+     }) {
+       const cfg = yield* config.get()
+-      const resolved = yield* provider.getModel(input.model.providerID, input.model.modelID)
++      // Blind verification: prefer the configured INDEPENDENT judge model so
++      // the working model can't approve its own stop. Unresolvable override →
++      // loud warn + fall back to the session model (old behavior), never a
++      // silent behavior change.
++      const judgeOverride = cfg.experimental?.judgeModel
++      const judgeExit = judgeOverride
++        ? yield* provider
++            .getModel(
++              Provider.parseModel(judgeOverride).providerID,
++              Provider.parseModel(judgeOverride).modelID,
++            )
++            .pipe(Effect.exit)
++        : undefined
++      if (judgeExit && Exit.isFailure(judgeExit))
++        yield* elog.warn("goal judge model not found; falling back to session model", {
++          judgeModel: judgeOverride,
++          error: String(Cause.squash(judgeExit.cause)),
++        })
++      const judgeRef =
++        judgeExit && Exit.isSuccess(judgeExit) ? Provider.parseModel(judgeOverride!) : input.model
++      const resolved =
++        judgeExit && Exit.isSuccess(judgeExit)
++          ? judgeExit.value
++          : yield* provider.getModel(input.model.providerID, input.model.modelID)
+       const language = yield* provider.getLanguage(resolved)
+       const tracer = cfg.experimental?.openTelemetry
+         ? Option.getOrUndefined(yield* Effect.serviceOption(OtelTracer.OtelTracer))
+         : undefined
+ 
+-      const authInfo = yield* auth.get(input.model.providerID).pipe(Effect.orDie)
+-      const isOpenaiOauth = input.model.providerID === "openai" && authInfo?.type === "oauth"
++      const authInfo = yield* auth.get(judgeRef.providerID).pipe(Effect.orDie)
++      const isOpenaiOauth = judgeRef.providerID === "openai" && authInfo?.type === "oauth"
+ 
+       // Convert the conversation to native model messages so the judge sees the
+       // real tool calls/results/images — same context the working agent had.
 diff --git a/packages/opencode/src/session/max-mode.ts b/packages/opencode/src/session/max-mode.ts
 --- a/packages/opencode/src/session/max-mode.ts
 +++ b/packages/opencode/src/session/max-mode.ts
@@ -41,20 +100,27 @@ diff --git a/packages/opencode/src/session/max-mode.ts b/packages/opencode/src/s
 diff --git a/packages/opencode/src/session/prompt.ts b/packages/opencode/src/session/prompt.ts
 --- a/packages/opencode/src/session/prompt.ts
 +++ b/packages/opencode/src/session/prompt.ts
-@@ -3165,6 +3165,20 @@
-             const maxModeCfg = (yield* config.get()).experimental?.maxMode
+@@ -3162,9 +3162,26 @@
+                 Effect.provideService(LLM.Service, llm),
+                 Effect.provideService(ToolRegistry.Service, registry),
+               )
+-            const maxModeCfg = (yield* config.get()).experimental?.maxMode
++            const expCfg = (yield* config.get()).experimental
++            const maxModeCfg = expCfg?.maxMode
              const useMaxMode =
                agent.name === MaxMode.MAX_MODE_AGENT && maxModeCfg !== undefined && format.type !== "json_schema"
 +            // Blind verification: judge may run on a SEPARATE model so the
-+            // generator can't approve its own work. Unresolvable → loud warn +
++            // generator can't approve its own work. maxMode.judgeModel wins,
++            // then the general experimental.judgeModel. Unresolvable → loud warn +
 +            // fall back to the step model (never a silent behavior change).
++            const judgeModelRef = maxModeCfg?.judgeModel ?? expCfg?.judgeModel
 +            const judgeModel = yield* Effect.gen(function* () {
-+              if (!useMaxMode || !maxModeCfg?.judgeModel) return undefined
-+              const parsed = Provider.parseModel(maxModeCfg.judgeModel)
++              if (!useMaxMode || !judgeModelRef) return undefined
++              const parsed = Provider.parseModel(judgeModelRef)
 +              const exit = yield* provider.getModel(parsed.providerID, parsed.modelID).pipe(Effect.exit)
 +              if (Exit.isSuccess(exit)) return exit.value
 +              yield* slog.warn("max-mode judge model not found; falling back to step model", {
-+                judgeModel: maxModeCfg.judgeModel,
++                judgeModel: judgeModelRef,
 +                error: String(Cause.squash(exit.cause)),
 +              })
 +              return undefined
@@ -62,7 +128,7 @@ diff --git a/packages/opencode/src/session/prompt.ts b/packages/opencode/src/ses
  
              const processArgs = {
                user: lastUser,
-@@ -3229,6 +3243,7 @@
+@@ -3229,6 +3246,7 @@
                    handle,
                    llm,
                    candidates: maxModeCfg?.candidates,
