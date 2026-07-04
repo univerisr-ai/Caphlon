@@ -11,7 +11,7 @@
  * `caphlon tools unlink` ile geri alınabilir.
  */
 
-import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { onPath } from '../external.js';
@@ -46,6 +46,23 @@ export interface ToolAdapter {
 function backupOnce(file: string): void {
   const bak = `${file}.caphlon-bak`;
   if (existsSync(file) && !existsSync(bak)) copyFileSync(file, bak);
+}
+
+/**
+ * link() öncesi hale gerçekten geri dön. Önceki unlink() implementasyonları
+ * `.caphlon-bak` hiç okumuyordu — sadece bilinen caphlon anahtarlarını elle
+ * siliyordu, bu yüzden kullanıcının link'ten ÖNCE aynı anahtarlarda (örn.
+ * ANTHROPIC_MODEL) zaten bir değeri varsa o kayboluyordu. Yedek varsa ondan
+ * tam geri yükle (ve tüket — bir sonraki link() taze bir yedek alsın).
+ * Yedek yoksa (dosya caphlon tarafından sıfırdan oluşturulmuşsa) çağıran
+ * kendi sürgün-temizleme mantığına düşer.
+ */
+function restoreBackup(file: string): boolean {
+  const bak = `${file}.caphlon-bak`;
+  if (!existsSync(bak)) return false;
+  copyFileSync(bak, file);
+  rmSync(bak);
+  return true;
 }
 
 function readJson(file: string): Record<string, any> {
@@ -90,6 +107,7 @@ const claudeAdapter: ToolAdapter = {
   },
   unlink() {
     const file = this.configPath();
+    if (restoreBackup(file)) return;
     const cfg = readJson(file);
     if (cfg.env) {
       for (const k of [
@@ -133,6 +151,7 @@ const opencodeAdapter: ToolAdapter = {
   },
   unlink() {
     const file = this.configPath();
+    if (restoreBackup(file)) return;
     const cfg = readJson(file);
     if (cfg.provider?.caphlon) {
       delete cfg.provider.caphlon;
@@ -175,6 +194,7 @@ const codexAdapter: ToolAdapter = {
   },
   unlink() {
     const file = this.configPath();
+    if (restoreBackup(file)) return;
     if (!existsSync(file)) return;
     writeFileSync(file, stripBlock(readFileSync(file, 'utf8')));
   },
