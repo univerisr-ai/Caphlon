@@ -1,0 +1,33 @@
+diff --git a/tests/help/code-intel-ingester.test.ts b/tests/help/code-intel-ingester.test.ts
+--- a/tests/help/code-intel-ingester.test.ts
++++ b/tests/help/code-intel-ingester.test.ts
+@@ -4,6 +4,7 @@
+  */
+ 
+ import { describe, it, expect, vi } from 'vitest';
++import { existsSync } from 'node:fs';
+ import { ingestCodeIntel, createHashCache } from '../../src/help/code-intel-ingester.js';
+ import { join } from 'node:path';
+ 
+@@ -28,13 +29,20 @@
+ 
+ const PROJECT_ROOT = join(import.meta.dirname, '../../');
+ 
++// The wiki-ingest test requires the artifact of an EXTERNAL tool
++// (`code-review-graph build` -> .code-review-graph/wiki, gitignored). Without
++// it the test can only fail for environmental reasons, telling us nothing
++// about the code under test. Skip VISIBLY (reported as skipped, not passed)
++// instead of failing every fresh checkout.
++const HAS_WIKI_ARTIFACT = existsSync(join(PROJECT_ROOT, '.code-review-graph', 'wiki'));
++
+ // ---------------------------------------------------------------------------
+ // Tests
+ // ---------------------------------------------------------------------------
+ 
+ describe('code-intel-ingester', () => {
+   describe('ingestCodeIntel', () => {
+-    it('should ingest wiki pages from code-review-graph', async () => {
++    it.skipIf(!HAS_WIKI_ARTIFACT)('should ingest wiki pages from code-review-graph', async () => {
+       const { ingester, ingested } = createMockIngester();
+       const result = await ingestCodeIntel(ingester, PROJECT_ROOT);
+ 
