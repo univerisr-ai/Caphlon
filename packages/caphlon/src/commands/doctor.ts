@@ -79,6 +79,24 @@ function odBuilt(odDir: string | null): boolean {
   return existsSync(join(odDir, 'apps', 'daemon', 'dist', 'cli.js'));
 }
 
+/**
+ * `caphlon ui` içindeki /voice özelliği (MiMo Code'un kendi ASR pipeline'ı)
+ * platforma göre bir mikrofon kaydedici bekler. Wire etmemiz gereken tek şey
+ * bu — ASR'ın kendisi zaten MiMo'da gerçek ve çalışır durumda.
+ */
+function voiceRecorderStatus(): { ok: boolean; detail: string } {
+  const byPlatform: Record<string, { bins: string[]; install: string }> = {
+    darwin: { bins: ['sox', 'rec'], install: 'brew install sox' },
+    linux: { bins: ['arecord', 'sox'], install: 'apt install alsa-utils (veya: apt install sox)' },
+    win32: { bins: ['sox'], install: 'choco install sox.portable' },
+  };
+  const plat = byPlatform[process.platform];
+  if (!plat) return { ok: false, detail: `${process.platform} için desteklenmiyor` };
+  const found = plat.bins.find((b) => onPath(b));
+  if (found) return { ok: true, detail: `${found} bulundu` };
+  return { ok: false, detail: `kayıt aracı yok → ${plat.install}` };
+}
+
 /** Bir python yorumlayıcısının sürümü ≥3.10 mu? (aider ön koşulu) */
 function pythonOk(): { ok: boolean; detail: string } {
   // Aider kendi venv'inde çalışıyorsa sistem Python'unun sürümü önemsizdir.
@@ -268,6 +286,18 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
       detail: t.ready ? 'hazır' : `kurulu değil → ${t.how}`,
     });
   }
+
+  // MiMo Voice (/voice, caphlon ui içinde): Caphlon bunu yeniden yazmaz —
+  // TUI'nin kendi ASR'ı var, sadece platforma özgü bir mikrofon kaydedici
+  // binary ister. Sesi Xiaomi/MiMo'nun kendi ASR servisine gönderir; bunun
+  // kimlik doğrulaması TUI içindeki `/login` akışıyla yapılır (caphlon connect
+  // ile bağlanan model kimliğinden bağımsız) — bu yüzden salt bilgilendirme.
+  const voice = voiceRecorderStatus();
+  results.push({
+    check: 'MiMo Voice (/voice, caphlon ui)',
+    status: voice.ok ? '✅' : 'ℹ️',
+    detail: voice.detail,
+  });
 
   // Print results
   for (const r of results) {

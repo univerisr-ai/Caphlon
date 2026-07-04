@@ -116,7 +116,7 @@
 | 2 | **Blind Verification** | ✅ Bitti. `caphlon connect --judge`; max-mode + goal gate ayrı bağımsız modelle doğrular |
 | 3 | **Living Marketplace** | ✅ Bitti. `caphlon skill sync push/pull` (git) — evolved skill'ler paylaşılabilir, test'li |
 | 4 | **Open Design Desktop** | macOS/Windows native app, Linux optional lane — tam entegrasyon için ayrı bir adım |
-| 5 | **MiMo Voice** | /voice ASR henüz Qualixar'a taşınmadı, sadece pattern olarak belgelendi |
+| 5 | **MiMo Voice** | Kısmen ✅: `/voice` zaten MiMo Code'da gerçek/çalışır (`caphlon ui` miras alır); `caphlon doctor` artık kayıt aracını (sox/rec/arecord) kontrol ediyor. Kalan: Xiaomi kimlik doğrulaması TUI'nin kendi `/login`'inde — genel `caphlon connect` sağlayıcısı olarak eklemek ayrı, doğrulanmamış bir iş; Qualixar'a "channel" olarak taşımak ayrı bir epik |
 
 ---
 
@@ -157,6 +157,8 @@
 ## Özet
 
 **Kapatılan boşluk:** 13/13 ana eksiklik giderildi (SkillEvolver, Blind Verification, Living Marketplace dahil)
-**Devam eden:** Open Design Desktop, MiMo Voice (P2 — ayrı epikler)
+**Devam eden:** Open Design Desktop (P2 — ayrı epik), MiMo Voice'un Qualixar
+channel'ı olarak taşınması + `caphlon connect`'e Xiaomi sağlayıcısı eklenmesi
+(P2 — ayrı, doğrulama gerektiren epik)
 **Yeni yetenekler:** Tasarım pipeline'ı, görsel/video üretimi, self-improvement,
 compose workflow, persistent memory, design critique
