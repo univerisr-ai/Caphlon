@@ -12,6 +12,7 @@ import { resolveMimoLauncher } from './compose.js';
 import { resolveHermesLauncher } from './hermes.js';
 import { resolveFlowerLauncher } from './flower.js';
 import { listSkills } from '../config/skills.js';
+import { heading, paint } from '../ui/theme.js';
 
 /**
  * Aider GERÇEKTEN çalışır mı? Dosya varlığı yetmez — bağlı bir Python ile
@@ -122,9 +123,7 @@ function pythonOk(): { ok: boolean; detail: string } {
 }
 
 export async function doctorCommand(options: { fix?: boolean } = {}): Promise<void> {
-  console.log('\n╔══════════════════════════════════════════╗');
-  console.log('║        Caphlon — Diagnostics             ║');
-  console.log('╚══════════════════════════════════════════╝\n');
+  console.log('\n' + heading('Caphlon — Diagnostics') + '\n');
 
   const results: { check: string; status: string; detail: string }[] = [];
 
@@ -302,16 +301,18 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
   // Print results
   for (const r of results) {
     console.log(`  ${r.status} ${r.check}`);
-    console.log(`     ${r.detail}`);
+    console.log(`     ${paint.dim(r.detail)}`);
   }
 
   // Summary
   const errors = results.filter((r) => r.status === '❌').length;
   const warnings = results.filter((r) => r.status === '⚠️').length;
 
-  console.log(`\n📊 Summary: ${results.length} checks, ${errors} errors, ${warnings} warnings`);
+  const errPart = errors > 0 ? paint.red(`${errors} errors`) : `${errors} errors`;
+  const warnPart = warnings > 0 ? paint.yellow(`${warnings} warnings`) : `${warnings} warnings`;
+  console.log(`\n📊 Summary: ${results.length} checks, ${errPart}, ${warnPart}`);
   if (errors === 0) {
-    console.log('✅ System looks good!');
+    console.log(paint.green('✅ System looks good!'));
     console.log('');
     return;
   }

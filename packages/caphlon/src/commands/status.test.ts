@@ -36,9 +36,9 @@ test('aktif model + judge gösterilir; anahtar değeri asla ekrana çıkmaz', ()
     }),
   );
   const out = renderConnectionLines().join('\n');
-  assert.match(out, /Active: {3}opencode \/ big-pickle/);
-  assert.match(out, /API key: {2}✅ set/);
-  assert.match(out, /Judge: {4}groq \/ llama-3\.3-70b-versatile/);
+  assert.match(out, /Active\s+opencode \/ big-pickle/);
+  assert.match(out, /API key\s+✅ set/);
+  assert.match(out, /Judge\s+groq \/ llama-3\.3-70b-versatile/);
   // Zen defaultKey ("public") dahil hiçbir anahtar değeri yazdırılmaz.
   assert.doesNotMatch(out, /public/);
 });
@@ -53,12 +53,12 @@ test('judge bağlı değilse aktif modele düşüldüğü söylenir', () => {
     }),
   );
   const out = renderConnectionLines().join('\n');
-  assert.match(out, /API key: {2}❌ missing \(caphlon connect groq\)/);
-  assert.match(out, /Judge: {4}— active model/);
+  assert.match(out, /API key\s+❌ missing \(caphlon connect groq\)/);
+  assert.match(out, /Judge\s+— active model/);
 });
 
 test('skill satırları sayım ve sync durumunu gösterir (taze kurulum)', () => {
   const out = renderSkillLines().join('\n');
-  assert.match(out, /Skills: {3}0 installed \(0 learned\)/);
+  assert.match(out, /Skills\s+0 installed \(0 learned\)/);
   assert.match(out, /no remote \(caphlon skill sync push <repo>\)/);
 });
