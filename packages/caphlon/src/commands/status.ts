@@ -3,6 +3,43 @@
  */
 
 import { getStatus, checkOpenDesign } from '../qos-bridge.js';
+import { getActiveModel, getJudgeModel } from '../config/active.js';
+import { syncStatus } from '../config/skills.js';
+
+/**
+ * `caphlon connect` bağlantı özeti. Anahtarın kendisi ASLA yazdırılmaz —
+ * yalnızca var/yok bilgisi gösterilir.
+ */
+export function renderConnectionLines(): string[] {
+  const active = getActiveModel();
+  if (!active) {
+    return ['   Status:   ⬜ Not connected', '   Connect:  caphlon connect'];
+  }
+  const key = active.apiKey
+    ? '✅ set'
+    : `❌ missing (caphlon connect ${active.provider.id})`;
+  const judge = getJudgeModel();
+  return [
+    `   Active:   ${active.provider.id} / ${active.model}`,
+    `   API key:  ${key}`,
+    judge
+      ? `   Judge:    ${judge.provider.id} / ${judge.model}`
+      : '   Judge:    — active model (separate: caphlon connect --judge)',
+  ];
+}
+
+/** Skill sayımı + Living Marketplace sync durumu. */
+export function renderSkillLines(): string[] {
+  const s = syncStatus();
+  const lines = [`   Skills:   ${s.totalSkills} installed (${s.learnedCount} learned)`];
+  if (s.remote) {
+    const last = s.lastPushAt ?? s.lastPullAt;
+    lines.push(`   Sync:     ${s.remote}${last ? ` (last: ${last})` : ''}`);
+  } else {
+    lines.push('   Sync:     ⬜ no remote (caphlon skill sync push <repo>)');
+  }
+  return lines;
+}
 
 export async function statusCommand(): Promise<void> {
   // Cross-process: getStatus() discovers a `caphlon dev` running in another shell.
@@ -24,6 +61,14 @@ export async function statusCommand(): Promise<void> {
     console.log('   Status:   ⬜ Not running');
     console.log('   Start:    caphlon dev');
   }
+
+  // LLM connection (caphlon connect)
+  console.log('\n🔌 LLM:');
+  for (const line of renderConnectionLines()) console.log(line);
+
+  // Skills + Living Marketplace sync
+  console.log('\n📚 Skills:');
+  for (const line of renderSkillLines()) console.log(line);
 
   // Open Design
   console.log('\n🎨 Open Design:');

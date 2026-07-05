@@ -142,7 +142,15 @@ Sağlıklı sistemde onarımı atlar; hatada exit 1. **Done ✓:** sağlıklı s
   native app varsa `caphlon design ui`'nin tarayıcı yerine onu tetiklemesi —
   gerçek kurulu app olmadan doğrulanamadığı için (test edilmemiş davranış
   merge edilmez) YAPILMADI; istenirse ayrı, doğrulanabilir bir P3 notu.
-- **P2-5 · `.env.example` ↔ `connect`** tutarlılık denetimi + `caphlon status` zenginleştirme.
+- **P2-5 · `.env.example` ↔ `connect`** tutarlılık denetimi + `caphlon status` zenginleştirme. **Done ✓** (2026-07-05)
+  `src/env-example.test.ts` dört invariantı yapısal olarak kilitler: compose'un
+  `${VAR}` referansları belgelidir; kodun okuduğu `CAPHLON_*` değişkenleri
+  belgelidir (bu denetim `CAPHLON_HOME` eksiğini yakalattı → `.env.example`e
+  eklendi); belgelenen her değişkenin gerçek tüketicisi vardır; sağlayıcı API
+  anahtarları `.env.example`e asla giremez (tek yol `caphlon connect`).
+  `caphlon status` artık LLM bağlantısını (aktif model, anahtar var/yok —
+  değeri asla yazdırılmaz, judge modeli) ve skill/sync durumunu da gösterir
+  (`src/commands/status.test.ts`).
 
 ---
 
