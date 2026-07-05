@@ -148,19 +148,37 @@ Bu projenin iddiaları **gerçek modellerle ölçüldü** (pazarlama değil, öl
 
 ## Bileşenler
 
-| Katman | Araç | Lisans | Doküman |
-| :--- | :--- | :--- | :--- |
-| CLI | [Caphlon](packages/caphlon/) | MIT | [README](packages/caphlon/README.md) |
-| Orkestratör | [Qualixar OS](https://github.com/qualixar/qualixar-os) | FSL-1.1-ALv2 | — |
-| Design/UI Pipeline | [Open Design](https://github.com/nexu-io/open-design) (entegre) | Apache 2.0 | [docs/integration/OPEN_DESIGN_INTEGRATION.md](docs/integration/OPEN_DESIGN_INTEGRATION.md) |
-| Memory/Workflow | [MiMo Code](https://github.com/XiaomiMiMo/MiMo-Code) (entegre) | MIT | [docs/integration/MIMO_CODE_INTEGRATION.md](docs/integration/MIMO_CODE_INTEGRATION.md) |
-| Pair-Programming | [Aider](https://github.com/Aider-AI/aider) (entegre) | Apache 2.0 | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
-| Arayüz (TUI) | [OpenCode](https://github.com/sst/opencode) (entegre) | MIT | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
-| VBS Ajan | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | MIT | — |
-| Federated | [Flower](https://github.com/flwrlabs/flower) | Apache 2.0 | — |
-| Fine-Tuning | SmolLM + LoRA (TRL/PEFT) | Apache 2.0 | — |
-| Token Opt. | [tokenless](https://github.com/TokenFleet-AI/tokenless) | Apache 2.0 | — |
-| Güvenlik | Özel (Validator + Reputation + Honeypot) | MIT | — |
+| Katman | Araç | Durum | Lisans | Doküman |
+| :--- | :--- | :--- | :--- | :--- |
+| CLI | [Caphlon](packages/caphlon/) | **Çekirdek** | MIT | [README](packages/caphlon/README.md) |
+| Arayüz (TUI) | [OpenCode](https://github.com/sst/opencode) (entegre) | **Çekirdek** | MIT | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
+| Pair-Programming | [Aider](https://github.com/Aider-AI/aider) (entegre) | **Çekirdek** | Apache 2.0 | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
+| Orkestratör | [Qualixar OS](https://github.com/qualixar/qualixar-os) | Koşullu | FSL-1.1-ALv2 | — |
+| Design/UI Pipeline | [Open Design](https://github.com/nexu-io/open-design) (entegre) | Koşullu | Apache 2.0 | [docs/integration/OPEN_DESIGN_INTEGRATION.md](docs/integration/OPEN_DESIGN_INTEGRATION.md) |
+| Memory/Workflow | [MiMo Code](https://github.com/XiaomiMiMo/MiMo-Code) (entegre) | Koşullu | MIT | [docs/integration/MIMO_CODE_INTEGRATION.md](docs/integration/MIMO_CODE_INTEGRATION.md) |
+| Güvenlik | Özel (Validator + Reputation + Honeypot) | Koşullu | MIT | — |
+| VBS Ajan | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | Deneysel | MIT | — |
+| Federated | [Flower](https://github.com/flwrlabs/flower) | Deneysel | Apache 2.0 | — |
+| Fine-Tuning | SmolLM + LoRA (TRL/PEFT) | Deneysel | Apache 2.0 | — |
+| Token Opt. | [tokenless](https://github.com/TokenFleet-AI/tokenless) | Deneysel | Apache 2.0 | — |
+
+### Çekirdek / Koşullu / Deneysel — dürüst etiketleme
+
+- **Çekirdek** — günlük değerin geldiği yer: OpenCode TUI, Aider ve Caphlon'un
+  kendi fikirleri (`connect` tek-anahtar dağıtımı, skill katmanı + kör
+  doğrulama, doctor/status). Bunlarsız Caphlon'un varlık sebebi kalmaz.
+- **Koşullu** — o iş akışını gerçekten kullanıyorsan değerli: tasarım işi
+  yapıyorsan Open Design, çoklu-ajan koşturuyorsan Qualixar, MEMORY.md/compose
+  desenlerini kullanıyorsan MiMo. Kullanmıyorsan sadece disk ağırlığı.
+- **Deneysel** — bağlı ve çalışır durumda, ama uçtan uca değer ürettiği henüz
+  HİÇ kanıtlanmadı: Hermes→Flower federated eğitim hattı hiç koşulmadı,
+  tokenless'ın kullanılan yüzeyi dar, Kovan'ın çok-makine federasyonu tek
+  makinede spekülatif. "Çalışıyor" ile "gerekli" ayrı şeylerdir.
+
+> **Kural:** Deneysel bir parçaya birkaç haftalık gerçek kullanımda bir kez
+> bile dokunulmadıysa, kopyası kalır ama zihinsel yükten (doctor beklentisi,
+> kurulum adımı, doküman önceliği) çıkarılır. Terfi/emeklilik kararını masa
+> başı tartışması değil, kullanım verir.
 
 ## Gereksinimler
 
