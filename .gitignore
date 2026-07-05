@@ -1,6 +1,7 @@
 .venv/
 venv/
 core/aider-venv/
+core/hermes-venv/
 core/data/
 node_modules/
 __pycache__/

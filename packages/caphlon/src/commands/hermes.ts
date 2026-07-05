@@ -63,9 +63,17 @@ function findHermesDir(): string | null {
   );
 }
 
-/** Gerçek Hermes'i nasıl başlatacağımıza karar ver: PATH binary → bundled (Python).
+/** Gerçek Hermes'i nasıl başlatacağımıza karar ver: venv → PATH binary → bundled (Python).
  *  Export'lu: doctor da AYNI kontrolü kullanır (yüzeysel "dizin var mı" yerine). */
 export function resolveHermesLauncher(): { cmd: string; baseArgs: string[]; env?: Record<string, string> } | null {
+  // 1. Caphlon'un kendi venv'i (pip install -e core/hermes-agent-main —
+  //    kopyalanan kaynağın kendisi çalışır; aider-venv/flower-venv deseni).
+  const venvHermes = firstExisting(
+    join(projectRoot(), 'core', 'hermes-venv', 'bin', 'hermes'),
+    join(projectRoot(), 'hermes-venv', 'bin', 'hermes'),
+  );
+  if (venvHermes) return { cmd: venvHermes, baseArgs: [] };
+
   if (onPath('hermes')) return { cmd: 'hermes', baseArgs: [] };
 
   const dir = findHermesDir();
@@ -96,8 +104,9 @@ export async function hermesCommand(args: string[]): Promise<void> {
   const launcher = resolveHermesLauncher();
   if (!launcher) {
     notFound('Hermes Agent', [
-      'curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash',
-      'veya bundled sürüm için Python kur + hermes-agent-main bağımlılıklarını yükle (uv sync)',
+      'bundled kopyadan kur (önerilen): bash scripts/setup-cores.sh',
+      'veya elle: python3.13 -m venv core/hermes-venv && core/hermes-venv/bin/pip install -e core/hermes-agent-main',
+      'veya sistem geneli: curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash',
     ]);
     return;
   }

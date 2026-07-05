@@ -264,12 +264,12 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
       // Komutla AYNI kontrol: hermes PATH'te VEYA `import hermes_cli.main` başarılı.
       // Dizin var demek "çalışır" değil — deps yoksa import patlar.
       ready: resolveHermesLauncher() !== null,
-      how: 'hermes-agent.nousresearch.com/install.sh  (Python deps gerekir)',
+      how: 'bundled kopyadan: bash scripts/setup-cores.sh  (hermes-venv kurar)',
     },
     {
       name: 'tokenless (caphlon tokenless)',
       ready: tokenlessAvailable(),
-      how: 'cargo install tokenless',
+      how: 'bundled kopyadan: cd core/tokenless-main && cargo build --release  (Rust toolchain ister)',
     },
     {
       name: 'Flower (caphlon flower)',

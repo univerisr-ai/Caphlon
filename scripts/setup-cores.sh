@@ -73,6 +73,38 @@ else
   fi
 fi
 
+# --- 3. Hermes Agent (bundled kopya → izole venv) -----------------------------
+# Kopyalanan core/hermes-agent-main'i çalıştırılabilir yapar (aider-venv
+# deseni). Hermes opsiyoneldir: uygun Python yoksa uyarır ve devam eder.
+HERMES_SRC=""
+for d in "core/hermes-agent-main" "hermes-agent-main"; do
+  [ -f "$d/pyproject.toml" ] && HERMES_SRC="$d" && break
+done
+if [ -x core/hermes-venv/bin/hermes ]; then
+  ok "Hermes venv zaten hazır (core/hermes-venv)"
+elif [ -n "$HERMES_SRC" ]; then
+  # pyproject requires-python = ">=3.11,<3.14"
+  HPY=""
+  for c in python3.13 python3.12 python3.11 /opt/homebrew/bin/python3.13 python3; do
+    if command -v "$c" >/dev/null 2>&1 && \
+       "$c" -c 'import sys; sys.exit(0 if (3,11) <= sys.version_info < (3,14) else 1)' 2>/dev/null; then
+      HPY="$c"; break
+    fi
+  done
+  if [ -n "$HPY" ]; then
+    say "Hermes Agent ($HERMES_SRC) — izole venv (core/hermes-venv, $HPY)"
+    if "$HPY" -m venv core/hermes-venv \
+       && core/hermes-venv/bin/pip install --quiet --upgrade pip \
+       && core/hermes-venv/bin/pip install --quiet -e "$HERMES_SRC"; then
+      ok "Hermes hazır (core/hermes-venv/bin/hermes)"
+    else
+      warn "Hermes venv kurulamadı — elle dene: core/hermes-venv/bin/pip install -e $HERMES_SRC"
+    fi
+  else
+    warn "Python 3.11–3.13 yok; Hermes venv atlandı (opsiyonel)."
+  fi
+fi
+
 echo
 say "Yerel yamalar (packages/caphlon/patches/*) uygulanıyor"
 # Tutmayan yama kurulumu kesmesin ama sesli kalsın (script kendisi uyarır).
