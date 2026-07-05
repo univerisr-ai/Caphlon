@@ -161,3 +161,23 @@ Sağlıklı sistemde onarımı atlar; hatada exit 1. **Done ✓:** sağlıklı s
 8. P2 kalemleri ihtiyaç sırasına göre.
 
 > **İlke:** Her kalem bir testle "shipped" sayılır; orkestratör/exec/secrets dokunuşları ayrı PR + gözden geçirme.
+
+---
+
+## Bileşen Etiketlemesi — Çekirdek / Koşullu / Deneysel (2026-07-05)
+
+P0–P2 backlog'u kapandıktan sonra sorulan "hepsi gerekli mi?" sorusunun
+cevabı: **hayır**. README'deki Bileşenler tablosuna dürüst bir Durum sütunu
+eklendi:
+
+- **Çekirdek:** OpenCode TUI, Aider, Caphlon'un kendi katmanları (connect,
+  skill + kör doğrulama, doctor/status).
+- **Koşullu:** Qualixar, Open Design, MiMo, Kovan güvenlik katmanı — ilgili
+  iş akışı gerçekten kullanılıyorsa değerli.
+- **Deneysel:** Hermes, Flower, fine-tuning hattı, tokenless — bağlı ve
+  çalışır, ama uçtan uca değer ürettiği hiç kanıtlanmadı (Hermes→Flower
+  eğitim döngüsü hiç koşulmadı; deponun ~1.7M satırı bu ikisinde).
+
+Karar kuralı: birkaç haftalık gerçek kullanımda dokunulmayan Deneysel parça
+silinmez ama zihinsel yükten çıkar; terfi/emeklilik kararını kullanım verir.
+Hiçbir kopya bu kararla silinmedi — bu bir etiketleme, temizlik değil.
