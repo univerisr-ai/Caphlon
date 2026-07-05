@@ -5,6 +5,7 @@
 import { getStatus, checkOpenDesign } from '../qos-bridge.js';
 import { getActiveModel, getJudgeModel } from '../config/active.js';
 import { syncStatus } from '../config/skills.js';
+import { heading, kv, panel } from '../ui/theme.js';
 
 /**
  * `caphlon connect` bağlantı özeti. Anahtarın kendisi ASLA yazdırılmaz —
@@ -13,30 +14,33 @@ import { syncStatus } from '../config/skills.js';
 export function renderConnectionLines(): string[] {
   const active = getActiveModel();
   if (!active) {
-    return ['   Status:   ⬜ Not connected', '   Connect:  caphlon connect'];
+    return [kv('Status', '⬜ Not connected'), kv('Connect', 'caphlon connect')];
   }
   const key = active.apiKey
     ? '✅ set'
     : `❌ missing (caphlon connect ${active.provider.id})`;
   const judge = getJudgeModel();
   return [
-    `   Active:   ${active.provider.id} / ${active.model}`,
-    `   API key:  ${key}`,
-    judge
-      ? `   Judge:    ${judge.provider.id} / ${judge.model}`
-      : '   Judge:    — active model (separate: caphlon connect --judge)',
+    kv('Active', `${active.provider.id} / ${active.model}`),
+    kv('API key', key),
+    kv(
+      'Judge',
+      judge
+        ? `${judge.provider.id} / ${judge.model}`
+        : '— active model (separate: caphlon connect --judge)',
+    ),
   ];
 }
 
 /** Skill sayımı + Living Marketplace sync durumu. */
 export function renderSkillLines(): string[] {
   const s = syncStatus();
-  const lines = [`   Skills:   ${s.totalSkills} installed (${s.learnedCount} learned)`];
+  const lines = [kv('Skills', `${s.totalSkills} installed (${s.learnedCount} learned)`)];
   if (s.remote) {
     const last = s.lastPushAt ?? s.lastPullAt;
-    lines.push(`   Sync:     ${s.remote}${last ? ` (last: ${last})` : ''}`);
+    lines.push(kv('Sync', `${s.remote}${last ? ` (last: ${last})` : ''}`));
   } else {
-    lines.push('   Sync:     ⬜ no remote (caphlon skill sync push <repo>)');
+    lines.push(kv('Sync', '⬜ no remote (caphlon skill sync push <repo>)'));
   }
   return lines;
 }
@@ -47,48 +51,40 @@ export async function statusCommand(): Promise<void> {
   const qosRunning = status.running;
   const odAvailable = await checkOpenDesign();
 
-  console.log('\n╔══════════════════════════════════════════╗');
-  console.log('║         Caphlon — System Status          ║');
-  console.log('╚══════════════════════════════════════════╝\n');
+  console.log('\n' + heading('Caphlon — System Status') + '\n');
 
   // Qualixar OS
-  console.log('📡 Qualixar OS:');
-  if (qosRunning) {
-    console.log(`   Status:   ✅ Running (PID: ${status.pid})`);
-    console.log(`   API:      http://localhost:${status.port}`);
-    console.log(`   Dashboard: http://localhost:${status.dashboardPort}`);
-  } else {
-    console.log('   Status:   ⬜ Not running');
-    console.log('   Start:    caphlon dev');
-  }
+  const qosLines = qosRunning
+    ? [
+        kv('Status', `✅ Running (PID: ${status.pid})`),
+        kv('API', `http://localhost:${status.port}`),
+        kv('Dash', `http://localhost:${status.dashboardPort}`),
+      ]
+    : [kv('Status', '⬜ Not running'), kv('Start', 'caphlon dev')];
+  console.log(panel('📡 Qualixar OS', qosLines));
 
   // LLM connection (caphlon connect)
-  console.log('\n🔌 LLM:');
-  for (const line of renderConnectionLines()) console.log(line);
+  console.log(panel('🔌 LLM', renderConnectionLines()));
 
   // Skills + Living Marketplace sync
-  console.log('\n📚 Skills:');
-  for (const line of renderSkillLines()) console.log(line);
+  console.log(panel('📚 Skills', renderSkillLines()));
 
   // Open Design
-  console.log('\n🎨 Open Design:');
-  if (odAvailable) {
-    console.log('   Status:   ✅ Daemon running (port 7456)');
-    console.log('   URL:      http://localhost:7456');
-  } else {
-    console.log('   Status:   ⬜ Not detected');
-    console.log('   Install:  curl -fsSL https://open-design.ai/install.sh | sh');
-  }
+  const odLines = odAvailable
+    ? [kv('Status', '✅ Daemon running (port 7456)'), kv('URL', 'http://localhost:7456')]
+    : [
+        kv('Status', '⬜ Not detected'),
+        kv('Install', 'curl -fsSL https://open-design.ai/install.sh | sh'),
+      ];
+  console.log(panel('🎨 Open Design', odLines));
 
   // Memory
-  console.log('\n🧠 Memory:');
   const memoryPath = process.cwd() + '/MEMORY.md';
   const { existsSync } = await import('node:fs');
-  if (existsSync(memoryPath)) {
-    console.log('   Status:   ✅ MEMORY.md found');
-  } else {
-    console.log('   Status:   ⬜ No MEMORY.md (run caphlon init)');
-  }
+  const memLines = existsSync(memoryPath)
+    ? [kv('Status', '✅ MEMORY.md found')]
+    : [kv('Status', '⬜ No MEMORY.md (run caphlon init)')];
+  console.log(panel('🧠 Memory', memLines));
 
   console.log('');
 }
