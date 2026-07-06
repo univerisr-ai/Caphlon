@@ -12,12 +12,19 @@ Kovan Zekası ile topluluk destekli, merkeziyetsiz AI geliştirme sistemi. Devas
 
 ---
 
-## Tek Komutla Başla
+## Başla
+
+> Not: Paket henüz npm'de yayınlanmadı; kurulum kaynaktan yapılır. Vendored
+> araçlar (`core/*`) pakete girmediği için `npx caphlon` tarzı global kurulum
+> bugün desteklenmiyor.
 
 ```bash
-npx caphlon
-# veya
-npm install -g caphlon && caph dev
+git clone https://github.com/univerisr-ai/Caphlon.git && cd Caphlon
+bash scripts/setup-cores.sh        # CLI build + Qualixar + Aider/LiteLLM + Hermes (idempotent)
+node packages/caphlon/bin/caphlon.js doctor
+
+# İsteğe bağlı: her yerden `caphlon` / `caph` demek için
+cd packages/caphlon && npm link
 ```
 
 ## Mimari
@@ -182,7 +189,9 @@ Bu projenin iddiaları **gerçek modellerle ölçüldü** (pazarlama değil, öl
 
 ## Gereksinimler
 
-- Node.js 22+ (Caphlon CLI, Qualixar OS)
+- Node.js **22 LTS** — Caphlon CLI 22+ ile çalışır, ama Qualixar OS özellikle
+  22 ister: 24+ native `better-sqlite3` derlemesini kırar (setup-cores.sh
+  uyumlu Node 22'yi brew/nvm'den kendisi arar)
 - Python 3.11+ (fine-tuning)
 - Rust 1.89+ (tokenless)
 - 2GB+ RAM (CPU-only çalışır)

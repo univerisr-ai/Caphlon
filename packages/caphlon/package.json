@@ -27,12 +27,19 @@
     "test": "tsx --test 'src/**/*.test.ts'",
     "prepublishOnly": "npm run build"
   },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "commander": "^15.0.0"
+  },
   "devDependencies": {
     "@types/node": "^22.20.0",
-    "chalk": "^5.6.2",
-    "commander": "^15.0.0",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/univerisr-ai/Caphlon.git",
+    "directory": "packages/caphlon"
   },
   "engines": {
     "node": ">=22.0.0"

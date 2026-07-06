@@ -1,41 +1,41 @@
 # Caphlon CLI
 
-**Unified AI Agent Platform** — Qualixar OS + Open Design + MiMo Code.
+**Unified AI Agent Platform** — Qualixar OS + Open Design + MiMo Code + OpenCode.
 
 ```bash
-npm install -g caphlon
-# or
-npx caphlon
+# Henüz npm'de yayınlanmadı — kurulum kaynaktan (repo kökünde):
+bash scripts/setup-cores.sh       # CLI build + çekirdek araçlar (idempotent)
+cd packages/caphlon && npm link   # `caphlon` / `caph` PATH'e girer
 ```
 
 ## Quick Start
 
 ```bash
-# Start the agent system
-caphlon dev
-
-# Run a task
-caphlon run "Build a REST API for todos"
-
-# Design something
-caphlon design prototype "Modern landing page" --system linear-app
-
-# Check status
-caphlon status
+caphlon connect                  # LLM sağlayıcısı + API key bağla (tek sefer)
+caphlon ui                       # OpenCode TUI — günlük sürücü
+caphlon run "Todo REST API'si"   # Qualixar OS ile görev koştur
+caphlon status                   # tek bakışta sistem durumu
 ```
 
 ## Commands
 
+Tam ve güncel liste: `caphlon --help` (komut yüzeyi `src/index.ts`'te tanımlı).
+
 | Command | Description |
 |---------|-------------|
-| `init` | Initialize a new Caphlon project |
-| `dev` | Start the agent + dashboard |
-| `run <prompt>` | Run a task via Qualixar OS |
-| `design` | Design pipeline (Open Design) |
-| `compose` | Compose workflow (MiMo Code) |
-| `status` | System status |
-| `doctor` | Diagnostics |
-| `-v, --version` | Version info |
+| `connect` / `disconnect` / `model` | LLM sağlayıcısı bağla, anahtar şifreli saklanır, tüm araçlara dağıtılır |
+| `ui` (`tui`) | Gerçek OpenCode TUI'sini başlatır (bağlı modelle) |
+| `code` | Aider — git-farkındalıklı çift-programlama |
+| `max` | Kör doğrulama: adayları aktif model üretir, kazananı ayrı judge seçer |
+| `skill` | Skill katmanı: add/list/evolve + `sync push/pull` (Living Marketplace) |
+| `init` / `dev` / `run` | Proje başlat, ajan+dashboard, Qualixar ile görev |
+| `design` | Open Design boru hattı (`design daemon start`, `design ui`) |
+| `compose` | MiMo workflow (`compose start/list/resume`) |
+| `serve` | LiteLLM proxy — bağlı modeli OpenAI-uyumlu endpoint olarak sun |
+| `tools` | Harici ajan CLI'larına (Claude Code vb.) Caphlon'u bağla |
+| `hive` | Kovan zekâsı: çok-örnekli konsensüs |
+| `hermes` / `flower` / `tokenless` | Deneysel katman (bkz. kök README "Durum" sütunu) |
+| `status` / `doctor` | Durum özeti / gerçek probe'larla tanılama (`doctor --fix`) |
 
 ## Aliases
 
@@ -44,7 +44,8 @@ caphlon status
 ## Architecture
 
 ```
-caphlon → Qualixar OS (agent orchestration)
+caphlon → OpenCode (TUI) · Aider (pair-programming)
+       → Qualixar OS (agent orchestration)
        → Open Design (design pipeline)
        → MiMo Code (memory + compose workflow)
 ```
