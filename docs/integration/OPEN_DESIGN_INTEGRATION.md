@@ -90,7 +90,16 @@ qualixar-os-main/src/design/
 └── mimo-bridge.ts    ← MiMo Code bridge (memory + compose + dream/distill)
 ```
 
-### Kayıtlı Araçlar
+> **Dürüst durum (2026-07-06):** Bu iki modül YAZILMIŞ ama Qualixar'ın tool
+> registry'sine hiçbir yerden **bağlanmamış** taslaklardır — `core/qualixar-os-main`
+> içinde onları import eden tek satır yoktur ve taze kurulumda core kopyasına
+> taşınmazlar. Aşağıdaki "Kayıtlı Araçlar" tablosu bu yüzden *hedef tasarımı*
+> anlatır, mevcut davranışı değil. Bağlamak isteyen için yol:
+> `packages/caphlon/patches/qualixar-os-main/` altına tool-registry kaydını yapan
+> bir yama + dosyaları kopyalayan setup adımı (P3). Bugün Open Design'a giden
+> ÇALIŞAN yol `caphlon design` (od CLI) ve OpenCode profilindeki MCP kaydıdır.
+
+### Kayıtlı Araçlar (hedef tasarım — henüz bağlı değil)
 
 | Araç Adı | Açıklama | Kategori |
 |---|---|---|

@@ -74,7 +74,8 @@ export async function statusCommand(): Promise<void> {
     ? [kv('Status', '✅ Daemon running (port 7456)'), kv('URL', 'http://localhost:7456')]
     : [
         kv('Status', '⬜ Not detected'),
-        kv('Install', 'curl -fsSL https://open-design.ai/install.sh | sh'),
+        kv('Start', 'caphlon design daemon start'),
+        kv('Build', 'cd open-design-main && pnpm install && pnpm --filter @open-design/daemon build'),
       ];
   console.log(panel('🎨 Open Design', odLines));
 

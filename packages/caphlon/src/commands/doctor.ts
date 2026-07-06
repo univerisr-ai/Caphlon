@@ -6,10 +6,11 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { findQosDir, findOpenDesignDir, findProjectRoot, checkOpenDesign, resolveNodeForQos } from '../qos-bridge.js';
-import { onPath, findBun, findPython, firstExisting, projectRoot as root } from '../external.js';
+import { onPath, findPython, projectRoot as root } from '../external.js';
 import { tokenlessAvailable } from './tokenless.js';
 import { resolveMimoLauncher } from './compose.js';
 import { resolveHermesLauncher } from './hermes.js';
+import { resolveLauncher as resolveOpencodeLauncher } from './ui.js';
 import { resolveFlowerLauncher } from './flower.js';
 import { listSkills } from '../config/skills.js';
 import { heading, paint } from '../ui/theme.js';
@@ -120,6 +121,14 @@ function pythonOk(): { ok: boolean; detail: string } {
     return { ok: false, detail: `${py} ${v} (aider ≥3.10 ister)` };
   }
   return { ok: false, detail: 'Python yok' };
+}
+
+/** llm.ts + serve.ts'in beklediği litellm gerçekten çalışır mı (import + proxy bin). */
+function litellmProbe(): boolean {
+  const venv = join(root(), 'core', 'aider-venv');
+  const py = join(venv, 'bin', 'python');
+  if (!existsSync(py) || !existsSync(join(venv, 'bin', 'litellm'))) return false;
+  return spawnSync(py, ['-c', 'import litellm'], { stdio: 'ignore' }).status === 0;
 }
 
 export async function doctorCommand(options: { fix?: boolean } = {}): Promise<void> {
@@ -240,18 +249,26 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
 
   // -- Bileşen araçları (gerçek, wire edilmiş) -----------------------------
   const r = root();
-  const bundled = (...p: string[]) => firstExisting(...p) !== null;
   const aider = aiderProbe(join(r, 'core', 'aider-main'));
   const tools: { name: string; ready: boolean; how: string }[] = [
     {
       name: 'OpenCode TUI (caphlon ui)',
-      ready: onPath('opencode') || (!!findBun() && bundled(join(r, 'core', 'opencode-main', 'packages', 'opencode', 'src', 'index.ts'))),
-      how: 'bundled (bun) / opencode',
+      // Komutla AYNI kontrol (ui.ts resolveLauncher): bun + kaynak + node_modules
+      // VEYA PATH'te çalışan opencode — yüzeysel "dosya var" değil.
+      ready: resolveOpencodeLauncher() !== null,
+      how: 'bundled kopyadan: cd core/opencode-main && bun install  (veya PATH kurulumu: opencode)',
     },
     {
       name: 'Aider (caphlon code)',
       ready: aider.ready,
       how: aider.detail,
+    },
+    {
+      name: 'LiteLLM (caphlon serve, tek-atış LLM)',
+      // llm.ts/serve.ts ile AYNI beklenti: aider-venv'de litellm import edilebilir
+      // VE proxy binary'si var (serve bin/litellm'i çalıştırır).
+      ready: litellmProbe(),
+      how: 'bundled kopyadan: bash scripts/setup-cores.sh  (aider-venv + litellm[proxy] kurar)',
     },
     {
       name: 'MiMo Code (caphlon compose)',
@@ -318,14 +335,16 @@ export async function doctorCommand(options: { fix?: boolean } = {}): Promise<vo
   }
 
   if (!options.fix) {
-    console.log('❌ Hataları düzeltmek için: caphlon doctor --fix');
+    console.log('❌ Onarım: caphlon doctor --fix  (CLI/Qualixar/Aider+LiteLLM/Hermes kurulumunu onarır;');
+    console.log('   pnpm, Python, Node sürümü gibi sistem araçları elle kurulmalıdır)');
     console.log('');
     process.exitCode = 1;
     return;
   }
 
-  // --fix: idempotent setup-cores'u çalıştır (CLI + qos kurulum/derleme), sonra
-  // tek seferlik yeniden tanıla. Script kendisi Node 22'yi ve eksik core'ları halleder.
+  // --fix: idempotent setup-cores'u çalıştır (CLI build + Qualixar OS +
+  // Aider/LiteLLM venv + Hermes venv + patch replay), sonra tek seferlik
+  // yeniden tanıla. Sistem araçlarını (pnpm/Python/Node) KURMAZ.
   const script = join(findProjectRoot(), 'scripts', 'setup-cores.sh');
   if (!existsSync(script)) {
     console.log(`❌ Onarım scripti bulunamadı: ${script}`);

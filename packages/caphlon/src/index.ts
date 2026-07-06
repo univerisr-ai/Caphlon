@@ -171,10 +171,10 @@ Examples:
 
   composeCmd
     .command('resume')
-    .description('Resume a compose workflow')
-    .argument('<id>', 'Task ID')
-    .action(async (id) => {
-      await composeCommand('resume', [id]);
+    // MiMo kendi oturum seçicisini açar — id almaz (compose.ts yardım metinleriyle tutarlı).
+    .description("MiMo'yu oturum seçiciyle aç (devam et)")
+    .action(async () => {
+      await composeCommand('resume', []);
     });
 
   // -----------------------------------------------------------------------
