@@ -73,7 +73,40 @@ else
   fi
 fi
 
-# --- 3. Hermes Agent (bundled kopya → izole venv) -----------------------------
+# --- 3. Aider + LiteLLM (bundled kopya → izole venv) --------------------------
+# caphlon code (aider), caphlon serve (litellm proxy) ve tek-atış LLM çağrısı
+# (src/llm.ts) bu venv'i bekler — llm.ts'in "make setup-cores" ipucunun doğru
+# olmasını bu adım sağlar. Python ≥3.10 yoksa uyarır ve devam eder.
+AIDER_SRC=""
+for d in "core/aider-main" "aider-main"; do
+  [ -f "$d/pyproject.toml" ] && AIDER_SRC="$d" && break
+done
+if core/aider-venv/bin/python -c 'import aider.main, litellm' >/dev/null 2>&1 \
+   && [ -x core/aider-venv/bin/litellm ]; then
+  ok "Aider+LiteLLM venv zaten hazır (core/aider-venv)"
+elif [ -n "$AIDER_SRC" ]; then
+  APY=""
+  for c in python3.13 python3.12 python3.11 python3.10 /opt/homebrew/bin/python3.13 python3; do
+    if command -v "$c" >/dev/null 2>&1 && \
+       "$c" -c 'import sys; sys.exit(0 if sys.version_info >= (3,10) else 1)' 2>/dev/null; then
+      APY="$c"; break
+    fi
+  done
+  if [ -n "$APY" ]; then
+    say "Aider ($AIDER_SRC) + litellm[proxy] — izole venv (core/aider-venv, $APY)"
+    if { [ -x core/aider-venv/bin/python ] || "$APY" -m venv core/aider-venv; } \
+       && core/aider-venv/bin/pip install --quiet --upgrade pip \
+       && core/aider-venv/bin/pip install --quiet -e "$AIDER_SRC" "litellm[proxy]"; then
+      ok "Aider+LiteLLM hazır (core/aider-venv)"
+    else
+      warn "Aider venv kurulamadı — elle dene: core/aider-venv/bin/pip install -e $AIDER_SRC 'litellm[proxy]'"
+    fi
+  else
+    warn "Python ≥3.10 yok; Aider/LiteLLM venv atlandı."
+  fi
+fi
+
+# --- 4. Hermes Agent (bundled kopya → izole venv) -----------------------------
 # Kopyalanan core/hermes-agent-main'i çalıştırılabilir yapar (aider-venv
 # deseni). Hermes opsiyoneldir: uygun Python yoksa uyarır ve devam eder.
 HERMES_SRC=""

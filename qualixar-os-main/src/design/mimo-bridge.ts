@@ -1,5 +1,9 @@
 // Copyright (c) 2026 Project Underdog
 // Part of Project Underdog | MIT License
+//
+// ⚠️ HENÜZ BAĞLI DEĞİL: Bu modül Qualixar tool-registry'sine hiçbir yerden
+// import edilmiyor (taslak/hedef tasarım). Bağlama yolu için:
+// docs/integration/OPEN_DESIGN_INTEGRATION.md "Dürüst durum" notu.
 /**
  * MiMo Code Bridge — Qualixar OS entegrasyon modülü
  *

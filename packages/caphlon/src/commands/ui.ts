@@ -175,8 +175,9 @@ interface Launcher {
   cwd?: string;
 }
 
-/** Prefer our customized source via Bun; fall back to the installed binary. */
-function resolveLauncher(): Launcher | null {
+/** Prefer our customized source via Bun; fall back to the installed binary.
+ *  Export'lu: doctor da AYNI kontrolü kullanır (node_modules şartı dahil). */
+export function resolveLauncher(): Launcher | null {
   const repo = opencodeRepoDir();
   const pkg = join(repo, 'packages', 'opencode');
   const bun = findBun();
