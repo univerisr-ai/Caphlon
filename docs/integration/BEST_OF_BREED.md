@@ -16,8 +16,8 @@
 | **Qualixar OS** (`core/qualixar-os-main`) | Çoklu-ajan orkestrasyon, Judge pipeline, dashboard | `caphlon dev`, `caphlon run` | `qos-bridge.ts` → `bin/qos.js serve` alt süreci |
 | **MiMo Code** (`MiMo-Code-main`) | Kalıcı hafıza (MEMORY.md), Compose workflow, Dream/Distill | `caphlon compose`, `caphlon init` | compose topolojisi + MEMORY.md şablonu |
 | **Open Design** (`open-design-main`) | 100+ tasarım skill'i, marka sistemleri, HTML→MP4 | `caphlon design` | `od` daemon (port 7456) / MCP köprüsü |
-| **Hermes Agent** (`core/hermes-agent-main`) | Kendi kendine öğrenme, batch trajectory üretimi | (eğitim hattı) | `core/hermes_flower_bridge.py` → `hermes` CLI |
-| **Flower** (`core/flower-main`) | Federated learning (SuperLink/SuperNode) | (eğitim hattı) | Hermes'ten gelen veriyle federated client |
+| **Hermes Agent** (`core/hermes-agent-main`) | Kendi kendine öğrenme, batch trajectory üretimi | `caphlon hermes` | `commands/hermes.ts` → hermes-venv/PATH'teki gerçek `hermes` CLI (bağlı model env ile); eğitim hattı: `core/hermes_flower_bridge.py` |
+| **Flower** (`core/flower-main`) | Federated learning (SuperLink/SuperNode) | `caphlon flower` | `commands/flower.ts` → flower-venv/PATH'teki gerçek `flwr`; Hermes'ten gelen veriyle federated client |
 | **tokenless** (`core/tokenless-main`) | Token sıkıştırma / maliyet optimizasyonu | `caphlon tokenless` | `commands/tokenless.ts` → gerçek `tokenless` binary'sini spawn eder |
 
 ---

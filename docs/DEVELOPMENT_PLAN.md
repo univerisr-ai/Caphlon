@@ -4,11 +4,13 @@
 > **Kapsam:** Mevcut kod tabanının kanıta dayalı durum tespiti + önceliklendirilmiş yol haritası.
 > **Yöntem:** `typecheck` (0 hata), `caphlon doctor` (18/18), komut akış denemeleri, çekirdek dizin denetimi.
 
-> ⚠️ **Dal/merge durumu (2026-07-01):** Aşağıda "Bitti" işaretli P0/P1 kalemleri **`feat/wire-tools-and-caphlon-ui`
-> dalında** yaşıyor — `origin/main`'e **henüz merge edilmedi** (dal 27 commit ileride, main 2 commit ıraksak).
-> `origin/main` ayrı bir **Ink+React TUI** taşıyor; merge `package.json` / `src/index.ts` / `tsconfig.json`'da
-> çakışır ve iki UI yaklaşımının uzlaştırılmasını gerektirir. Yani bu maddeler *dalda* doğrulandı ama
-> *main'de henüz yok* — "Done" ⇒ "dalda ship, main'e merge bekliyor" diye okuyun.
+> **Dal/merge durumu (güncel, 2026-07-06):** Varsayılan dal **`master`**'dır ve
+> bu plandaki tüm işler oraya merge edilmiştir (PR #2–#25). Eski uyarıdaki
+> `feat/wire-tools-and-caphlon-ui` dalı PR #3/#4 ile merge edilip silindi.
+> `origin/main` ise terk edilmiş Ink+React TUI denemesini taşıyan **bayat bir
+> daldır** (2 merge edilmemiş commit, master'dan ~70 commit geride) — no-rewrite
+> ilkesiyle çelişen bu yön yerine gerçek OpenCode TUI'si bağlandı (`caphlon ui`).
+> Silme/arşivleme kararı bekliyor; yeni iş ASLA main'e açılmaz.
 
 ---
 
@@ -78,13 +80,16 @@ skill'leri git reposuna gönderir, `pull` temiz makineye geri çeker. Uzak depo 
 yoksa commit yok), kanonik `main` dalı (git-sürümü bağımsız), yerel-yol koruması (GitHub'a sapmaz).
 **Done ✓:** push→pull round-trip 3 birim testiyle (yerel bare repo, ağsız) doğrulandı.
 
-### P1-2 · SkillEvolver temeli (GAP_ANALYSIS #1)
+### P1-2 · SkillEvolver temeli (GAP_ANALYSIS #1) — ✅ **Bitti**
 MiMo Dream/Distill var; üstüne **otomatik skill mutation** (öner-uygula değil, **öner-onayla**):
-trace → aday skill diff → judge → insan onayı. **Done:** Bir trace'ten onaylı bir skill üretilir.
+trace → aday skill diff → judge → insan onayı. **Done ✓:** `caphlon skill evolve`
+(judge kapısı + insan onayı) çalışıyor; GAP_ANALYSIS #1 ✅.
 
-### P1-3 · Blind Verification (GAP_ANALYSIS #2)
+### P1-3 · Blind Verification (GAP_ANALYSIS #2) — ✅ **Bitti**
 Generator ↔ verifier izolasyonu: üreten modelin çıktısını **bağımsız** bir judge doğrular,
-üretici kendi işini onaylayamaz. **Done:** `caphlon max` / compose verify aşamasına entegre, test.
+üretici kendi işini onaylayamaz. **Done ✓:** `caphlon max` + `caphlon connect --judge`
+(ayrı judge modeli) çalışıyor; GAP_ANALYSIS #2 ✅. Kalan tek açık uç aşağıdaki
+federated notundaki "compose verify aşamasına aynı izolasyonun taşınması".
 
 > **Federated varyant — ✅ wired (2026-07-01):** Kovan federated katmanında blind-eval gate artık
 > koordinatöre bağlı. `hive_server.HiveState(eval_fn=...)` verilirse, birleştirilen aday LoRA adapter
