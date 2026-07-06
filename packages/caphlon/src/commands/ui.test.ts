@@ -18,7 +18,7 @@ import { join } from 'node:path';
 
 process.env.CAPHLON_HOME = mkdtempSync(join(tmpdir(), 'caphlon-ui-test-'));
 
-const { reconcileSkillsInstruction, reconcileTokenlessMcp, reconcileOpenDesignMcp } =
+const { reconcileSkillsInstruction, reconcileTokenlessMcp, reconcileOpenDesignMcp, ensureProfileConfig } =
   await import('./ui.js');
 
 function freshProfile(cfg: unknown): string {
@@ -86,6 +86,21 @@ test('reconcileOpenDesignMcp: hazırsa od.mjs mcp live-artifacts girdisi yazıl�
   } else {
     assert.equal(cfg.mcp?.opendesign, undefined);
   }
+});
+
+test('ensureProfileConfig: opencode.json yoksa şablondan üretir, varsa ASLA dokunmaz', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'caphlon-ui-tpl-'));
+  writeFileSync(join(dir, 'opencode.template.json'), JSON.stringify({ theme: 'caphlon' }));
+  assert.equal(ensureProfileConfig(dir), true); // yoktan üretti
+  assert.deepEqual(readCfg(dir), { theme: 'caphlon' });
+  writeFileSync(join(dir, 'opencode.json'), JSON.stringify({ theme: 'caphlon', mcp: { x: 1 } }));
+  assert.equal(ensureProfileConfig(dir), false); // var olana dokunmadı
+  assert.deepEqual(readCfg(dir).mcp, { x: 1 });
+});
+
+test('ensureProfileConfig: şablon da yoksa sessizce false döner', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'caphlon-ui-notpl-'));
+  assert.equal(ensureProfileConfig(dir), false);
 });
 
 test('bozuk JSON: reconcile fonksiyonları fırlatmaz ve dosyayı ezmez', () => {
