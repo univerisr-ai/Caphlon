@@ -19,6 +19,16 @@ npm run typecheck
 # Build
 npm run build
 
+# Paket duman testi: npm pack + TEMİZ dizinde kur ve çalıştır.
+# (devDependencies'e kaçmış runtime bağımlılığı sınıfı hataları publish'ten
+# ÖNCE yakalar — monorepo'daki lokal node_modules bu hatayı maskeler.)
+TARBALL="$(npm pack --silent)"
+SMOKE="$(mktemp -d)"
+( cd "$SMOKE" && npm init -y >/dev/null 2>&1 && npm install --silent "$ROOT/$TARBALL" \
+  && ./node_modules/.bin/caphlon --version )
+rm -rf "$SMOKE" "$ROOT/$TARBALL"
+echo "✓ pack duman testi geçti (temiz dizinde caphlon --version çalıştı)"
+
 # Publish to npm
 npm publish --access public
 
