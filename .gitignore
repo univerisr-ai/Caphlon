@@ -42,3 +42,6 @@ core/aider-main/
 core/opencode-main/
 core/flower-venv/
 .omo/
+
+# Runtime-üretilen profil config (şablondan; makineye özgü mutlak yollar içerir)
+packages/caphlon/opencode-profile/opencode.json

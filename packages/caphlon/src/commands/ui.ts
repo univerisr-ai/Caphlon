@@ -123,6 +123,20 @@ function profileDir(): string {
 }
 
 /**
+ * Profilin opencode.json'ı git'te İZLENMEZ (reconcile* çalışma anında içine
+ * makineye özgü mutlak yollar yazar). Taze klonda izlenen şablondan üretilir;
+ * var olan dosyaya ASLA dokunulmaz (reconcile mutasyonları kalıcıdır).
+ */
+export function ensureProfileConfig(profile: string): boolean {
+  const cfgPath = join(profile, 'opencode.json');
+  if (existsSync(cfgPath)) return false;
+  const template = join(profile, 'opencode.template.json');
+  if (!existsSync(template)) return false;
+  writeFileSync(cfgPath, readFileSync(template, 'utf8'));
+  return true;
+}
+
+/**
  * Maksimum token tasarrufu: tokenless kuruluysa onu OpenCode'a MCP sunucusu
  * olarak bağla (şema/yanıt sıkıştırma + TOON kodlama araçları UI'daki AI'a
  * açılır). Kurulu değilse girdiyi temizle — böylece açılışta hata/çöp çıkmaz.
@@ -217,6 +231,7 @@ export async function uiCommand(passthrough: string[]): Promise<void> {
   // ships tui.json (theme: caphlon), themes/caphlon.json, and opencode.json
   // (instructions). This isolates our settings without touching ~/.config.
   const profile = profileDir();
+  ensureProfileConfig(profile); // taze klonda opencode.json'ı şablondan üret
   if (existsSync(join(profile, 'tui.json'))) {
     env.OPENCODE_CONFIG_DIR = profile;
   }

@@ -191,12 +191,10 @@ Hiçbir kopya bu kararla silinmedi — bu bir etiketleme, temizlik değil.
 
 ## P3 · Küçük açık uçlar (2026-07-06 denetimi)
 
-- **OpenCode profil şablonu → runtime kopya:** `packages/caphlon/opencode-profile/opencode.json`
-  git'te izlenir ama `reconcile*` fonksiyonları çalışma anında içine makineye özgü
-  mutlak yollar yazar (mcp girdileri) — yani `caphlon ui` sonrası dosya kirlenir.
-  Denetimde kişisel yol commit'ten temizlendi; kalıcı çözüm profili şablondan
-  `$CAPHLON_HOME/opencode-profile`'a kopyalayıp runtime yazımlarını oraya almak
-  (tema/CAPHLON.md yol çözümlemesi doğrulanarak — test edilmeden merge edilmez).
+- ~~OpenCode profil şablonu~~ **Çözüldü (2026-07-06):** `opencode.json` artık
+  git'te izlenmiyor (gitignore); izlenen `opencode.template.json` şablonundan
+  `ensureProfileConfig` taze klonda üretir, var olana asla dokunmaz
+  (`ui.test.ts` kilitli). Runtime mcp yazımları artık repo'yu kirletemez.
 - **origin/main:** terk edilmiş Ink+React TUI dalı (2 merge edilmemiş commit).
   Silme/arşivleme kullanıcı kararı.
 - **compose verify izolasyonu:** P1-3 notundaki tek kalan uç.
