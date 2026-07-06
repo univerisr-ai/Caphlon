@@ -87,10 +87,21 @@ caphlon run "..."    # Task çalıştır
 caphlon design       # Tasarım pipeline'ı
 caphlon compose      # Compose workflow (8 aşama)
 caphlon skill        # Skill deposu: list/add/search/show/learn/evolve/sync
+caphlon max          # Kör doğrulama: N aday üret, AYRI judge modeli kazananı seçsin
+caphlon serve        # LiteLLM proxy — bağlı modeli OpenAI-uyumlu endpoint yap
+caphlon tools        # Harici ajan CLI'larını (Claude Code vb.) Caphlon'a bağla
+caphlon hive         # Kovan zekâsı: çok-örnekli konsensüs
+caphlon hermes       # Hermes Agent (Deneysel — bkz. Bileşenler tablosu)
+caphlon flower       # Federated learning (Deneysel)
+caphlon tokenless    # Token sıkıştırma (Deneysel)
+caphlon disconnect   # Sağlayıcı anahtarını sil
 caphlon status       # Sistem durumu
-caphlon doctor       # Tanılama
+caphlon doctor       # Tanılama (--fix: kurulumu onarır)
 caphlon init         # Proje başlat
 ```
+
+> **Kör doğrulama:** üretici kendi işini onaylayamaz. Ayrı bir judge modeli
+> bağla ve max'ı kullan: `caphlon connect groq --judge` → `caphlon max "görev"`.
 
 > Tüm bileşenler tek modele bağlanır: `caphlon connect` ile bir kez bağla,
 > Qualixar OS / Aider / orkestratör aynı modeli kullansın. Detay:

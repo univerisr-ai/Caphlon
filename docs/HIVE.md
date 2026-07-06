@@ -11,7 +11,7 @@
 | 0 | **Öz-topluluk (self-consistency)** | Tek kullanıcıda bile: aynı modeli N kez örnekle → konsensüs. Swarm büyüyünce otomatik gerçek düğüm konsensüsüne döner. | N küçük çıkarım | ✅ (`hive solve`) |
 | 1 | **Consensus ensemble** | Aynı soru N düğüme; itibar-ağırlıklı oyla en iyi cevap. Bağımsız hatalar → çoğunluk doğru (Condorcet). | 1 küçük çıkarım | ✅ P0 (kodlandı) |
 | 2 | **Paylaşımlı çözüm önbelleği** | Bir düğüm çözünce herkes retrieval ile alır. N kullanıcı = N× hafıza. | ~0 (retrieval) | ✅ P0 (kodlandı) |
-| 3 | **Federated LoRA** | Ortak adapter arka planda gerçekten güçlenir; herkes indirir. | periyodik lokal LoRA | ⏳ P1 |
+| 3 | **Federated LoRA** | Ortak adapter arka planda gerçekten güçlenir; herkes indirir. | periyodik lokal LoRA | ✅ P1.5 (blind-eval gate bağlı; canlı holdout harness P2) |
 
 **Kanıt (simülasyon, `core/hive_demo.py`):** tek düğüm %45 → 7 düğüm %78 →
 51 düğüm %100. Ağırlık eğitimi olmadan, sadece konsensüsle.
