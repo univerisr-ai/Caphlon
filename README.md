@@ -2,66 +2,68 @@
 
 **Unified AI Agent Platform** — Qualixar OS + Open Design + MiMo Code.
 
-Kovan Zekası ile topluluk destekli, merkeziyetsiz AI geliştirme sistemi. Devasa donanım ve bütçelere sahip olmadan, açık kaynaklı yapay zeka modellerini en üst seviyeye çıkarmayı hedefleyen kolektif bir platform.
+A community-powered, decentralized AI development system built around Hive
+Intelligence (Kovan Zekası). A collective platform aiming to push open-source
+AI models to their peak — without needing massive hardware or budgets.
 
-> *"Birlikte öğrenen, birlikte güçlenir."* – Kovan Zekası Manifestosu
+> *"Together we learn, together we grow stronger."* – Hive Intelligence Manifesto
 
-![Caphlon TUI — deniz/ahtapot temalı arayüz](docs/images/caphlon-tui.png)
+![Caphlon TUI — ocean/octopus-themed interface](docs/images/caphlon-tui.png)
 
-> Arayüz turu (karşılama ekranı + model seçici) için: [docs/UI.md](docs/UI.md)
+> For a tour of the interface (welcome screen + model picker), see: [docs/UI.md](docs/UI.md)
 
 ---
 
-## Başla
+## Getting Started
 
-> Not: Paket henüz npm'de yayınlanmadı; kurulum kaynaktan yapılır. Vendored
-> araçlar (`core/*`) pakete girmediği için `npx caphlon` tarzı global kurulum
-> bugün desteklenmiyor.
+> Note: the package isn't published on npm yet; installation is from source.
+> Since the vendored tools (`core/*`) aren't part of the package, a global
+> install like `npx caphlon` isn't supported today.
 
 ```bash
 git clone https://github.com/univerisr-ai/Caphlon.git && cd Caphlon
 bash scripts/setup-cores.sh        # CLI build + Qualixar + Aider/LiteLLM + Hermes (idempotent)
 node packages/caphlon/bin/caphlon.js doctor
 
-# İsteğe bağlı: her yerden `caphlon` / `caph` demek için
+# Optional: to use `caphlon` / `caph` from anywhere
 cd packages/caphlon && npm link
 ```
 
-## Mimari
+## Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │  CAPHLON CLI (caphlon/caph)                                     │
-│  Tek komut — tüm bileşenlere erişim                             │
+│  Single command — access to every component                     │
 └──────────────────────────┬───────────────────────────────────────┘
                            │
 ┌──────────────────────────▼───────────────────────────────────────┐
-│  ORKESTRATÖR: Qualixar OS                                      │
-│  - Judge pipeline (mutabakat/consensus)                        │
-│  - Forge AI (görev dağıtımı + compose workflow)                │
-│  - Dashboard (24 tab)                                          │
-│  - OPEN DESIGN BRIDGE (tasarım/UI/creative pipeline)           │
-│  - MIMO BRIDGE (memory + compose + self-improvement)           │
+│  ORCHESTRATOR: Qualixar OS                                      │
+│  - Judge pipeline (consensus)                                   │
+│  - Forge AI (task dispatch + compose workflow)                  │
+│  - Dashboard (24 tabs)                                          │
+│  - OPEN DESIGN BRIDGE (design/UI/creative pipeline)             │
+│  - MIMO BRIDGE (memory + compose + self-improvement)            │
 └──────────────────────┬───────────────────────────────────────────┘
                        │
 ┌──────────────────────▼───────────────────────────────────────────┐
-│  DESIGN KATMANI: Open Design                                    │
-│  - 100+ skill (prototype, deck, image, video, dashboard)       │
-│  - 150 brand-grade DESIGN.md sistemi (Linear, Stripe, Apple)    │
-│  - 261 plugin (scenario, template, migration)                   │
+│  DESIGN LAYER: Open Design                                       │
+│  - 100+ skills (prototype, deck, image, video, dashboard)       │
+│  - 150 brand-grade DESIGN.md systems (Linear, Stripe, Apple)    │
+│  - 261 plugins (scenario, template, migration)                  │
 │  - HyperFrames HTML→MP4 motion graphics                        │
 └──────────────────────┬───────────────────────────────────────────┘
                        │
 ┌──────────────────────▼───────────────────────────────────────────┐
-│  MEMORY/WORKFLOW KATMANI: MiMo Code (fork of OpenCode)          │
+│  MEMORY/WORKFLOW LAYER: MiMo Code (fork of OpenCode)            │
 │  - Persistent memory (MEMORY.md + SQLite FTS5)                  │
 │  - Compose mode (specs-driven development)                      │
-│  - Dream/Distill (self-improvement döngüsü)                     │
-│  - Goal/Stop condition (judge ile premature stop önleme)        │
+│  - Dream/Distill (self-improvement loop)                        │
+│  - Goal/Stop condition (judge-gated, prevents premature stop)   │
 └──────────────────────┬───────────────────────────────────────────┘
                        │
 ┌──────────────────────▼───────────────────────────────────────────┐
-│  VBS AGENT: Hermes Agent                                        │
+│  VBS AGENT: Hermes Agent                                         │
 │  - Self-improving learning loop                                 │
 │  - Batch trajectory generation (training data)                  │
 │  - Multi-platform (Telegram/Discord/CLI)                        │
@@ -69,140 +71,144 @@ cd packages/caphlon && npm link
                        │
 ┌──────────────────────▼───────────────────────────────────────────┐
 │  FEDERATED: Flower (SuperLink/SuperNode)                        │
-│  FINE-TUNING: SmolLM-135M + LoRA (CPU destekli)                 │
+│  FINE-TUNING: SmolLM-135M + LoRA (CPU-capable)                   │
 │  TOKEN OPT.: tokenless + token-pilot                             │
-│  GÜVENLİK: Validator + İtibar + Honeypot                        │
+│  SECURITY: Validator + Reputation + Honeypot                    │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-## CLI Komutları
+## CLI Commands
 
 ```bash
-caphlon connect      # Model sağlayıcısı + API key bağla (OpenCode tarzı)
-caphlon model        # Aktif modeli göster / listele / değiştir
-caphlon ui           # OpenCode arayüzünü başlat (birebir OpenCode TUI)
-caphlon code         # AI çift-programlama (gerçek Aider ile)
-caphlon dev          # Agent + dashboard başlat
-caphlon run "..."    # Task çalıştır
-caphlon design       # Tasarım pipeline'ı
-caphlon compose      # Compose workflow (8 aşama)
-caphlon skill        # Skill deposu: list/add/search/show/learn/evolve/sync
-caphlon max          # Kör doğrulama: N aday üret, AYRI judge modeli kazananı seçsin
-caphlon serve        # LiteLLM proxy — bağlı modeli OpenAI-uyumlu endpoint yap
-caphlon tools        # Harici ajan CLI'larını (Claude Code vb.) Caphlon'a bağla
-caphlon hive         # Kovan zekâsı: çok-örnekli konsensüs
-caphlon hermes       # Hermes Agent (Deneysel — bkz. Bileşenler tablosu)
-caphlon flower       # Federated learning (Deneysel)
-caphlon tokenless    # Token sıkıştırma (Deneysel)
-caphlon disconnect   # Sağlayıcı anahtarını sil
-caphlon status       # Sistem durumu
-caphlon doctor       # Tanılama (--fix: kurulumu onarır)
-caphlon init         # Proje başlat
+caphlon connect      # Bind a model provider + API key (OpenCode-style)
+caphlon model        # Show / list / switch the active model
+caphlon ui           # Launch the OpenCode interface (the real OpenCode TUI)
+caphlon code         # AI pair-programming (via real Aider)
+caphlon dev          # Start agent + dashboard
+caphlon run "..."    # Run a task
+caphlon design       # Design pipeline
+caphlon compose      # Compose workflow (8 stages)
+caphlon skill        # Skill store: list/add/search/show/learn/evolve/sync
+caphlon max          # Blind verification: generate N candidates, a SEPARATE judge model picks the winner
+caphlon serve        # LiteLLM proxy — expose the connected model as an OpenAI-compatible endpoint
+caphlon tools        # Connect external agent CLIs (e.g. Claude Code) to Caphlon
+caphlon hive         # Hive intelligence: multi-sample consensus
+caphlon hermes       # Hermes Agent (Experimental — see Components table)
+caphlon flower       # Federated learning (Experimental)
+caphlon tokenless    # Token compression (Experimental)
+caphlon disconnect   # Remove a provider's key
+caphlon status       # System status
+caphlon doctor       # Diagnostics (--fix: repairs the setup)
+caphlon init         # Initialize a project
 ```
 
-> **Kör doğrulama:** üretici kendi işini onaylayamaz. Ayrı bir judge modeli
-> bağla ve max'ı kullan: `caphlon connect groq --judge` → `caphlon max "görev"`.
+> **Blind verification:** the producer can't grade its own work. Connect a
+> separate judge model and use max: `caphlon connect groq --judge` → `caphlon max "task"`.
 
-> Tüm bileşenler tek modele bağlanır: `caphlon connect` ile bir kez bağla,
-> Qualixar OS / Aider / orkestratör aynı modeli kullansın. Detay:
+> Every component binds to a single model: connect once with `caphlon connect`
+> and Qualixar OS / Aider / the orchestrator all use the same one. Details:
 > [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md)
 
-## 🐝 Kovan Zekası — kaç kişi kullanırsa o kadar güçlü
+## 🐝 Hive Intelligence — the more people use it, the stronger it gets
 
-Zayıf donanım (2GB RAM / i5 3. nesil) ve zayıf model ile, **kalabalık +
-konsensüs + ortak hafıza** sayesinde güçlü-model kalitesine yaklaş. Para değil,
-katılım. Detay: [docs/HIVE.md](docs/HIVE.md)
+Even with weak hardware (2GB RAM / 3rd-gen i5) and a weak model, get closer to
+strong-model quality through **crowd + consensus + shared memory**. It takes
+participation, not money. Details: [docs/HIVE.md](docs/HIVE.md)
 
 ```bash
-# Tek makinede, bugün — bağlı modeli N kez örnekle, konsensüsle güçlendir
-caphlon hive solve "Bu fonksiyonun hatası ne?" --samples 5
+# Single machine, today — sample the connected model N times, strengthen with consensus
+caphlon hive solve "What's the bug in this function?" --samples 5
 
-# Kanıt: çok düğüm → güç (simülasyon)
+# Proof: more nodes → more power (simulation)
 caphlon hive demo
 
-# Swarm kur (binlerce kullanıcı senaryosu)
-caphlon hive serve                         # koordinatör (ya da: docker compose up -d hive)
-caphlon hive join --id n1                  # her kullanıcı kendi düğümüyle katılır (n1, n2, ...)
-caphlon hive ask "2+2 kactir?"             # kovan konsensüs cevabı
+# Set up a swarm (thousands-of-users scenario)
+caphlon hive serve                         # coordinator (or: docker compose up -d hive)
+caphlon hive join --id n1                  # each user joins with their own node (n1, n2, ...)
+caphlon hive ask "what is 2+2?"            # hive consensus answer
 
-# Biriken güç: lokal LoRA katkısı gönder / güncel ortak adapter'ı indir
+# Accumulated power: submit a local LoRA contribution / pull the current shared adapter
 caphlon hive submit-delta --id n1 --delta delta.json
 caphlon hive pull --out adapter.json
 ```
 
-Güç katmanları: **öz-topluluk** (tek kullanıcı, anında) · **swarm konsensüs**
-(çok kullanıcı, anında) · **ortak çözüm önbelleği** (N kullanıcı = N× hafıza) ·
-**federated LoRA** (biriken). Güvenlik: validator + itibar + honeypot + anomali
-eleme. Gizlilik: ham veri makineden çıkmaz, yalnızca ağırlık farkı paylaşılır.
+Power layers: **self-ensemble** (single user, instant) · **swarm consensus**
+(multi-user, instant) · **shared solution cache** (N users = N× memory) ·
+**federated LoRA** (accumulated). Security: validator + reputation + honeypot +
+anomaly filtering. Privacy: raw data never leaves the machine — only weight
+deltas are shared.
 
-**Living Marketplace — öğrenilen dersler paylaşılır:** `caphlon skill evolve`
-bir görev izinden (trace) aday bir skill çıkarır → **bağımsız** bir judge
-onaylar → onaylanan ders `learned/`e yazılır. `caphlon skill sync push
-<owner/repo>` bu dersleri bir git reposuna gönderir; başka bir kullanıcı
-`caphlon skill sync pull` ile onaysız hiçbir şey çalıştırmadan aynı dersleri
-çeker (git shell-out — kendi dağıtım protokolümüz yok). Yayın her zaman ayrı
-bir insan onayı gerektirir; `--yes` bile otomatik push yapmaz.
+**Living Marketplace — learned lessons get shared:** `caphlon skill evolve`
+extracts a candidate skill from a task trace → an **independent** judge
+approves it → the approved lesson is written to `learned/`. `caphlon skill
+sync push <owner/repo>` pushes these lessons to a git repo; another user pulls
+the same lessons with `caphlon skill sync pull` without running anything
+unapproved (it's a git shell-out — we have no distribution protocol of our
+own). Publishing always requires a separate human approval; even `--yes`
+doesn't auto-push.
 
-### ⚖️ Dürüst değerlendirme — gerçek ölçümler
+### ⚖️ Honest evaluation — real measurements
 
-Bu projenin iddiaları **gerçek modellerle ölçüldü** (pazarlama değil, ölçü):
+This project's claims were **measured against real models** (not marketing, but measurement):
 
-| Senaryo | SOLO | HIVE | Δ | Neden |
+| Scenario | SOLO | HIVE | Δ | Why |
 |---|---|---|---|---|
-| Güçlü model (deepseek-v4-flash, 12 zor görev) | %100 | %100 | **0** | tavan — kaldıracak boşluk yok |
-| Zayıf model (qwen 0.5b, self-ensemble) | %50 | %50 | **0** | hatalar **korelasyonlu** (hep aynı yanlış) |
+| Strong model (deepseek-v4-flash, 12 hard tasks) | 100% | 100% | **0** | ceiling — no room to lift |
+| Weak model (qwen 0.5b, self-ensemble) | 50% | 50% | **0** | errors are **correlated** (always the same mistake) |
 
-**Net bulgu:** Saf consensus, düğümler **aynı** modeli koşarsa fark yaratmaz —
-çünkü tek bir modelin (ya da kopyalarının) hataları bağımsız değil, sistematiktir
-(Condorcet jüri teoremi bağımsızlık ister). Gerçek katkı şunları gerektirir:
+**Bottom line:** pure consensus makes no difference when nodes run the
+**same** model — because a single model's (or its copies') errors aren't
+independent, they're systematic (the Condorcet jury theorem requires
+independence). Real gains require:
 
-- **Model çeşitliliği** (farklı modeller → bağımsız hatalar → consensus düzeltir), ya da
-- **Ortak hafıza** (cache: bir kez çözüleni herkes bedava alır — en sağlam kazanç), ya da
-- **Federated** birikim (fail-safe + eval gate ile).
+- **Model diversity** (different models → independent errors → consensus corrects them), or
+- **Shared memory** (cache: whoever solves it once, everyone else gets it free — the most solid win), or
+- **Federated** accumulation (with a fail-safe + eval gate).
 
-> Yani "binlerce **aynı** zayıf düğüm → güçlü model" tek başına çalışmaz; tezin
-> doğru hâli **çeşitlilik + biriken hafıza**. Bu, tahminle değil **ölçümle**
-> belgelenmiştir.
+> So "thousands of **identical** weak nodes → strong model" doesn't work on
+> its own; the correct version of the thesis is **diversity + accumulated
+> memory**. This is documented by measurement, not assumption.
 
-## Bileşenler
+## Components
 
-| Katman | Araç | Durum | Lisans | Doküman |
+| Layer | Tool | Status | License | Docs |
 | :--- | :--- | :--- | :--- | :--- |
-| CLI | [Caphlon](packages/caphlon/) | **Çekirdek** | MIT | [README](packages/caphlon/README.md) |
-| Arayüz (TUI) | [OpenCode](https://github.com/sst/opencode) (entegre) | **Çekirdek** | MIT | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
-| Pair-Programming | [Aider](https://github.com/Aider-AI/aider) (entegre) | **Çekirdek** | Apache 2.0 | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
-| Orkestratör | [Qualixar OS](https://github.com/qualixar/qualixar-os) | Koşullu | FSL-1.1-ALv2 | — |
-| Design/UI Pipeline | [Open Design](https://github.com/nexu-io/open-design) (entegre) | Koşullu | Apache 2.0 | [docs/integration/OPEN_DESIGN_INTEGRATION.md](docs/integration/OPEN_DESIGN_INTEGRATION.md) |
-| Memory/Workflow | [MiMo Code](https://github.com/XiaomiMiMo/MiMo-Code) (entegre) | Koşullu | MIT | [docs/integration/MIMO_CODE_INTEGRATION.md](docs/integration/MIMO_CODE_INTEGRATION.md) |
-| Güvenlik | Özel (Validator + Reputation + Honeypot) | Koşullu | MIT | — |
-| VBS Ajan | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | Deneysel | MIT | — |
-| Federated | [Flower](https://github.com/flwrlabs/flower) | Deneysel | Apache 2.0 | — |
-| Fine-Tuning | SmolLM + LoRA (TRL/PEFT) | Deneysel | Apache 2.0 | — |
-| Token Opt. | [tokenless](https://github.com/TokenFleet-AI/tokenless) | Deneysel | Apache 2.0 | — |
+| CLI | [Caphlon](packages/caphlon/) | **Core** | MIT | [README](packages/caphlon/README.md) |
+| Interface (TUI) | [OpenCode](https://github.com/sst/opencode) (integrated) | **Core** | MIT | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
+| Pair-Programming | [Aider](https://github.com/Aider-AI/aider) (integrated) | **Core** | Apache 2.0 | [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md) |
+| Orchestrator | [Qualixar OS](https://github.com/qualixar/qualixar-os) | Conditional | FSL-1.1-ALv2 | — |
+| Design/UI Pipeline | [Open Design](https://github.com/nexu-io/open-design) (integrated) | Conditional | Apache 2.0 | [docs/integration/OPEN_DESIGN_INTEGRATION.md](docs/integration/OPEN_DESIGN_INTEGRATION.md) |
+| Memory/Workflow | [MiMo Code](https://github.com/XiaomiMiMo/MiMo-Code) (integrated) | Conditional | MIT | [docs/integration/MIMO_CODE_INTEGRATION.md](docs/integration/MIMO_CODE_INTEGRATION.md) |
+| Security | Custom (Validator + Reputation + Honeypot) | Conditional | MIT | — |
+| VBS Agent | [Hermes Agent](https://github.com/NousResearch/hermes-agent) | Experimental | MIT | — |
+| Federated | [Flower](https://github.com/flwrlabs/flower) | Experimental | Apache 2.0 | — |
+| Fine-Tuning | SmolLM + LoRA (TRL/PEFT) | Experimental | Apache 2.0 | — |
+| Token Opt. | [tokenless](https://github.com/TokenFleet-AI/tokenless) | Experimental | Apache 2.0 | — |
 
-### Çekirdek / Koşullu / Deneysel — dürüst etiketleme
+### Core / Conditional / Experimental — an honest label
 
-- **Çekirdek** — günlük değerin geldiği yer: OpenCode TUI, Aider ve Caphlon'un
-  kendi fikirleri (`connect` tek-anahtar dağıtımı, skill katmanı + kör
-  doğrulama, doctor/status). Bunlarsız Caphlon'un varlık sebebi kalmaz.
-- **Koşullu** — o iş akışını gerçekten kullanıyorsan değerli: tasarım işi
-  yapıyorsan Open Design, çoklu-ajan koşturuyorsan Qualixar, MEMORY.md/compose
-  desenlerini kullanıyorsan MiMo. Kullanmıyorsan sadece disk ağırlığı.
-- **Deneysel** — bağlı ve çalışır durumda, ama uçtan uca değer ürettiği henüz
-  HİÇ kanıtlanmadı: Hermes→Flower federated eğitim hattı hiç koşulmadı,
-  tokenless'ın kullanılan yüzeyi dar, Kovan'ın çok-makine federasyonu tek
-  makinede spekülatif. "Çalışıyor" ile "gerekli" ayrı şeylerdir.
+- **Core** — where the daily value comes from: the OpenCode TUI, Aider, and
+  Caphlon's own ideas (`connect`'s single-key distribution, the skill layer +
+  blind verification, doctor/status). Without these, Caphlon has no reason to exist.
+- **Conditional** — valuable if you actually use that workflow: Open Design if
+  you do design work, Qualixar if you run multi-agent tasks, MiMo if you use
+  the MEMORY.md/compose patterns. If you don't, it's just disk weight.
+- **Experimental** — wired and working, but has not YET proven end-to-end
+  value: the Hermes→Flower federated training pipeline has never actually been
+  run, tokenless's used surface is narrow, and the Hive's multi-machine
+  federation is speculative on a single machine. "Works" and "needed" are
+  different things.
 
-> **Kural:** Deneysel bir parçaya birkaç haftalık gerçek kullanımda bir kez
-> bile dokunulmadıysa, kopyası kalır ama zihinsel yükten (doctor beklentisi,
-> kurulum adımı, doküman önceliği) çıkarılır. Terfi/emeklilik kararını masa
-> başı tartışması değil, kullanım verir.
+> **Rule:** if an Experimental piece goes untouched for a few weeks of real
+> use, its copy stays but it drops out of the mental overhead (doctor
+> expectations, setup steps, doc priority). The promote/retire decision comes
+> from usage, not a desk discussion.
 
-## Gereksinimler
+## Requirements
 
-- Node.js **22 LTS** — Caphlon CLI 22+ ile çalışır, ama Qualixar OS özellikle
-  22 ister: 24+ native `better-sqlite3` derlemesini kırar (setup-cores.sh
-  uyumlu Node 22'yi brew/nvm'den kendisi arar)
+- Node.js **22 LTS** — the Caphlon CLI works with 22+, but Qualixar OS
+  specifically needs 22: 24+ breaks the native `better-sqlite3` build
+  (setup-cores.sh looks for a compatible Node 22 via brew/nvm on its own)
 - Python 3.11+ (fine-tuning)
 - Rust 1.89+ (tokenless)
-- 2GB+ RAM (CPU-only çalışır)
+- 2GB+ RAM (runs CPU-only)
