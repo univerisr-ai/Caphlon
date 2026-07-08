@@ -98,15 +98,43 @@ elif [ -n "$AIDER_SRC" ]; then
   done
   if [ -n "$APY" ]; then
     say "Aider ($AIDER_SRC) + litellm[proxy] — izole venv (core/aider-venv, $APY)"
+    # aider sürümünü setuptools-scm ile git'ten türetir; fetch-cores'un indirdiği
+    # GitHub tarball'ında .git yoktur → pretend-version olmadan kurulum patlar
+    # ("unable to detect version"). Yalnız aider-chat'e özgü değişkenle sabitleriz;
+    # aider --version 0.0.0 gösterir (kozmetik), işlev etkilenmez.
+    # İki AYRI pip çağrısı bilinçli: aider zaten kendi litellm pinini getirir;
+    # ikisini tek komutta çözdürmek ResolutionImpossible üretir. Önce aider,
+    # sonra aider'ın kurduğu litellm SÜRÜMÜNE sabitlenmiş [proxy] ekstraları.
     if { [ -x core/aider-venv/bin/python ] || "$APY" -m venv core/aider-venv; } \
        && core/aider-venv/bin/pip install --quiet --upgrade pip \
-       && core/aider-venv/bin/pip install --quiet -e "$AIDER_SRC" "litellm[proxy]"; then
-      ok "Aider+LiteLLM hazır (core/aider-venv)"
+       && SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AIDER_CHAT=0.0.0 \
+          core/aider-venv/bin/pip install --quiet -e "$AIDER_SRC" \
+       && LITEVER="$(core/aider-venv/bin/python -c 'from importlib.metadata import version; print(version("litellm"))')" \
+       && core/aider-venv/bin/pip install --quiet "litellm[proxy]==$LITEVER"; then
+      ok "Aider+LiteLLM hazır (core/aider-venv, litellm $LITEVER)"
     else
-      warn "Aider venv kurulamadı — elle dene: core/aider-venv/bin/pip install -e $AIDER_SRC 'litellm[proxy]'"
+      warn "Aider venv kurulamadı — elle dene (sıralı): SETUPTOOLS_SCM_PRETEND_VERSION_FOR_AIDER_CHAT=0.0.0 core/aider-venv/bin/pip install -e $AIDER_SRC && core/aider-venv/bin/pip install 'litellm[proxy]==<aiderin kurduğu sürüm>'"
     fi
   else
     warn "Python ≥3.10 yok; Aider/LiteLLM venv atlandı."
+  fi
+fi
+
+# --- 3.5 Open Design daemon (bundled kopya → build) ---------------------------
+# caphlon design + TUI'deki opendesign MCP araçları dist/cli.js ister; taze
+# indirmede derli gelmez. pnpm yoksa uyarıp geçer (Koşullu katman).
+if [ -f open-design-main/apps/daemon/dist/cli.js ]; then
+  ok "Open Design daemon zaten derli"
+elif [ -f open-design-main/apps/daemon/bin/od.mjs ]; then
+  if command -v pnpm >/dev/null 2>&1; then
+    say "Open Design daemon — pnpm install + build"
+    if ( cd open-design-main && pnpm install --silent && pnpm --filter @open-design/daemon build ); then
+      ok "Open Design daemon derlendi (dist/cli.js)"
+    else
+      warn "Open Design derlenemedi — elle: cd open-design-main && pnpm install && pnpm --filter @open-design/daemon build"
+    fi
+  else
+    warn "pnpm yok; Open Design build atlandı (kurulum: npm i -g pnpm)"
   fi
 fi
 
