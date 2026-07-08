@@ -16,6 +16,7 @@ import { join, resolve } from 'node:path';
 import chalk from 'chalk';
 import { getActiveModel, opencodeModelString } from '../config/active.js';
 import { tokenlessBinaryPath } from './tokenless.js';
+import { resolveAiderLauncher } from './code.js';
 import { writeSkillsIndex, listSkills } from '../config/skills.js';
 
 /**
@@ -175,6 +176,45 @@ export function reconcileTokenlessMcp(profile: string): boolean {
   return !!bin;
 }
 
+/**
+ * Kapsamlı kod düzenleme: gerçek Aider'ı stdio MCP köprüsüyle (mcp/aider-mcp)
+ * OpenCode'a araç olarak bağla — "reddit gibi site tasarla" nasıl opendesign'ı
+ * tetikliyorsa, çok-dosyalı iş de aider_edit'i tetikler. Komutla AYNI kontrol
+ * (resolveAiderLauncher): aider gerçekten çalışmıyorsa girdi temizlenir.
+ */
+export function reconcileAiderMcp(profile: string): boolean {
+  const cfgPath = join(profile, 'opencode.json');
+  if (!existsSync(cfgPath)) return false;
+  let cfg: Record<string, any>;
+  try {
+    cfg = JSON.parse(readFileSync(cfgPath, 'utf8')) as Record<string, any>;
+  } catch {
+    return false;
+  }
+  // Köprü derlenmiş dosya olarak var olmalı (dist/commands → dist/mcp).
+  const bridge = resolve(import.meta.dirname, '..', 'mcp', 'aider-mcp.js');
+  const ready = existsSync(bridge) && resolveAiderLauncher() !== null;
+
+  const before = JSON.stringify(cfg);
+  cfg.mcp ??= {};
+  migrateLegacyMcpServers(cfg);
+  if (ready) {
+    cfg.mcp.aider = {
+      type: 'local',
+      command: ['node', bridge],
+      enabled: true,
+      timeout: 600000, // aider koşusu dakikalar sürebilir
+    };
+  } else {
+    delete cfg.mcp.aider;
+    if (cfg.mcp && Object.keys(cfg.mcp).length === 0) delete cfg.mcp;
+  }
+  if (JSON.stringify(cfg) !== before) {
+    writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
+  }
+  return ready;
+}
+
 function findBun(): string | null {
   if (spawnSync('bun', ['--version'], { stdio: 'ignore' }).status === 0) return 'bun';
   const p = join(homedir(), '.bun', 'bin', 'bun');
@@ -245,6 +285,10 @@ export async function uiCommand(passthrough: string[]): Promise<void> {
   // Tasarım yetenekleri: Open Design MCP'sini otomatik bağla (derliyse).
   const designOn = reconcileOpenDesignMcp(profile);
 
+  // Kapsamlı kod düzenleme: gerçek Aider'ı araç olarak bağla (kuruluysa) —
+  // kullanıcı komut ezberlemez, ajan gerektiğinde aider_edit'i kendisi çağırır.
+  const aiderOn = reconcileAiderMcp(profile);
+
   if (active) {
     args.push('--model', opencodeModelString(active));
     if (active.apiKey) env[active.provider.envVar] = active.apiKey;
@@ -270,6 +314,9 @@ export async function uiCommand(passthrough: string[]): Promise<void> {
   }
   if (designOn) {
     console.log(chalk.green('   🎨 Open Design araçları bağlandı (tasarım/live-artifact otomatik)'));
+  }
+  if (aiderOn) {
+    console.log(chalk.green('   🤝 Aider bağlandı (kapsamlı kod değişikliğinde aider_edit otomatik)'));
   }
   console.log('');
 

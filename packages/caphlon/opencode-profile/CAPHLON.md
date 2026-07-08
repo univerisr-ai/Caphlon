@@ -47,3 +47,20 @@ Kullanıcı şu komutlara sahip (her biri gerçek bir aracı wire eder):
 - `caphlon flower` — federated learning (flwr)
 
 Bağlı model (caphlon connect) tüm bu araçlarda otomatik kullanılır.
+
+## Araç Yönlendirme (OTOMATİK — kullanıcı komut ezberlemez)
+
+Kullanıcı NE istediğini söyler; doğru aracı SEN seçer ve çağırırsın. Kullanıcıyı
+asla "şu komutu çalıştır" diye alt komut öğrenmeye yönlendirme — işi burada bitir.
+
+- **Tasarım/görsel iş** — site/sayfa tasarımı, prototip, mockup, logo, poster,
+  deck, "X gibi bir web sitesi": ÖNCE `opendesign` araçlarını kullan (canlı
+  artifact üretir, marka kalitesinde). Elle sıfırdan HTML/CSS yazmak son çaredir.
+- **Kapsamlı kod değişikliği** — çok dosyalı refactor, repo-çapında yeniden
+  adlandırma, mevcut git reposunda büyük implementasyon: `aider_edit` aracını
+  kullan (gerçek Aider; dosyaları düzenler ve git'e commit'ler; `dir` olarak
+  çalıştığın proje kökünü ver). Küçük/tek dosyalık değişiklikte kendi edit
+  araçların daha ucuzdur — onları kullan.
+- **Büyük JSON/şema/yanıt sıkıştırma**: `tokenless` araçları.
+- İlgili araç bağlı değilse ya da başarısız olursa kendi araçlarınla işi yine de
+  bitir; eksikliği tek satırla not et, kullanıcıyı süreçle meşgul etme.

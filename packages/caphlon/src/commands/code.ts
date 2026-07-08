@@ -28,8 +28,9 @@ function aiderVenvDir(): string {
   return resolve(import.meta.dirname, '..', '..', '..', '..', 'core', 'aider-venv');
 }
 
-/** Decide how to launch the real aider: venv → PATH → bundled module → none. */
-function resolveLauncher(): { cmd: string; baseArgs: string[]; env: Record<string, string> } | null {
+/** Decide how to launch the real aider: venv → PATH → bundled module → none.
+ *  Export'lu: Aider MCP köprüsü (src/mcp/aider-mcp.ts) AYNI çözümü kullanır. */
+export function resolveAiderLauncher(): { cmd: string; baseArgs: string[]; env: Record<string, string> } | null {
   // 1. Caphlon'un kendi venv'i (Python ≥3.10 ile pip install -e core/aider-main).
   //    En güvenilir yol: sistem Python'u 3.9 olsa bile burası izole çalışır.
   const venvPy = join(aiderVenvDir(), 'bin', 'python');
@@ -68,7 +69,7 @@ export async function codeCommand(files: string[], rawArgs: string[]): Promise<v
     return;
   }
 
-  const launcher = resolveLauncher();
+  const launcher = resolveAiderLauncher();
   if (!launcher) {
     console.error(chalk.red('✖ Aider bulunamadı.'));
     console.log('  Seçenekler:');
