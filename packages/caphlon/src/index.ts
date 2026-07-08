@@ -26,8 +26,20 @@ import { skillCommand } from './commands/skill.js';
 import { serveCommand } from './commands/serve.js';
 import { toolsCommand } from './commands/tools.js';
 import { maxCommand } from './commands/max.js';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
-const VERSION = '0.1.0';
+// Tek doğruluk kaynağı package.json — sürüm bir daha elle güncellenmez.
+const VERSION: string = (() => {
+  try {
+    const pkg = JSON.parse(
+      readFileSync(join(import.meta.dirname, '..', 'package.json'), 'utf8'),
+    ) as { version?: string };
+    return pkg.version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+})();
 
 export async function run(): Promise<void> {
   const program = new Command();
