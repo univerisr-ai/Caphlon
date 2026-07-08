@@ -87,7 +87,7 @@ caphlon code         # AI pair-programming (via real Aider)
 caphlon dev          # Start agent + dashboard
 caphlon run "..."    # Run a task
 caphlon design       # Design pipeline
-caphlon compose      # Compose workflow (8 stages)
+caphlon compose      # Compose workflow (8 stages; runs/resume: crash-safe continuation)
 caphlon skill        # Skill store: list/add/search/show/learn/evolve/sync
 caphlon max          # Blind verification: generate N candidates, a SEPARATE judge model picks the winner
 caphlon serve        # LiteLLM proxy — expose the connected model as an OpenAI-compatible endpoint

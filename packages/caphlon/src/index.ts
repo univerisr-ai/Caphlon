@@ -171,10 +171,18 @@ Examples:
 
   composeCmd
     .command('resume')
-    // MiMo kendi oturum seçicisini açar — id almaz (compose.ts yardım metinleriyle tutarlı).
-    .description("MiMo'yu oturum seçiciyle aç (devam et)")
+    // Gerçek devam: id verilirse MiMo --session <id>, verilmezse --continue (son oturum).
+    .description('Son compose oturumuna (ya da verilen oturuma) bağlamıyla devam et')
+    .argument('[session]', 'MiMo oturum id (boşsa en son oturum)')
+    .action(async (session?: string) => {
+      await composeCommand('resume', session ? [session] : []);
+    });
+
+  composeCmd
+    .command('runs')
+    .description('Kalıcı workflow koşularını listele (crash sonrası kısmi durum görünürlüğü)')
     .action(async () => {
-      await composeCommand('resume', []);
+      await composeCommand('runs', []);
     });
 
   // -----------------------------------------------------------------------

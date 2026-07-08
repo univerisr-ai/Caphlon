@@ -167,3 +167,64 @@ Living Marketplace    → Evolved skills auto-publish
 | Stop condition | Yok | Goal/Stop judge model |
 | Voice input | Yok | /voice ASR |
 | Context management | Statik | Budgeted injection + checkpoint/restore |
+
+---
+
+## Yarıda kesilirse ne olur? — Kesinti anatomisi (2026-07-08)
+
+"8 adımın 3.sü ortada patlarsa baştan mı başlar?" sorusunun kod-düzeyinde cevabı.
+İki ayrı kesinti türü var ve ikisi farklı işler:
+
+### 1. Adım hatası (süreç yaşıyor, bir aşama başarısız)
+
+MiMo'nun `workflow/builtin/compose.js` motoru **baştan başlamaz** — sınırlı,
+bağlam-taşıyan retry yapar:
+
+- **Implement/Verify döngüsü** en fazla 3 deneme (`MAX_TDD_ATTEMPTS`); başarısız
+  verify'ın hata çıktısı bir SONRAKİ denemenin prompt'una aynen enjekte edilir
+  ("Verify failures from previous attempt — focus on these") + araya ayrı bir
+  debug ajanı girer. Brainstorm/design TEKRARLANMAZ.
+- **Bağımsız görevler izole git worktree'lerinde** koşar — birinin çökmesi
+  diğerlerinin işini bozamaz; entegrasyon ayrı adımdır ve yalnız gerçekten
+  değişen worktree'leri birleştirir.
+- **Review→Fix döngüsü** aynı desen, en fazla 2 deneme.
+- Denemeler tükenirse çıktı sessiz ölüm değil, tam geçmişli yapılandırılmış
+  bir nesnedir: `{error:"verify-exhausted", verifyHistory, implementHistory, ...}`.
+- **Spec/plan/report dosyaları diske yazılır** (`docs/compose/{specs,plans,reports}`);
+  sonraki `compose start` bunları bulur ve "amendment" moduyla yeniden üretmek
+  yerine yerinde düzenler.
+
+### 2. Süreç ölümü (crash / SIGKILL / makine kapandı)
+
+Workflow motoru her ajan sonucunu **senkron** (`appendFileSync`) journal'a işler
+(`<data>/workflow/<runID>.jsonl`) — kasıtlı tasarım: SIGKILL anında bile o ana
+kadar tamamlanan her ajan diskte. Koşu durumu SQLite'ta (`workflow_run`),
+script kopyası `<runID>.js` olarak saklı. Süreç ölünce DB'de `running` kalır
+ve koşu **resume edilebilir**: motor journal'ı replay eder — tamamlanmış ajan
+sonuçları cache'ten anında döner, yalnız eksikler/başarısızlar yeniden koşar
+(deterministik: run başına PRNG seed'i runID'den türetilir).
+
+**Caphlon bağlaması** (no-rewrite: mekanizma MiMo'nun, kapı bizim):
+
+```bash
+caphlon compose runs               # kalıcı koşuları gör: runID, faz, işlenen ajan, durum, oturum
+caphlon compose resume             # son oturuma bağlamıyla dön (MiMo --continue)
+caphlon compose resume <sessionID> # belirli oturuma dön (MiMo --session)
+# TUI içinde: /workflows → Resume  (journal replay'ini tetikler)
+```
+
+### Dürüst sınırlar
+
+- **Compose ajanı bir skill orkestratörüdür** — her koşu workflow motorunu
+  kullanmaz (workflow tool'u deneysel bayrakla varsayılan açık, ama kullanım
+  modelin kararıdır). Motor kullanılmadıysa kalıcılık = oturum geçmişi (SQLite)
+  + `docs/compose` artefaktları; `compose resume` yine bağlamı geri getirir.
+- **Headless resume yok**: koşu resume'u çalışan bir MiMo instance'ı ister
+  (TUI `/workflows` ya da HTTP `POST /workflows/:runID/resume`) — Caphlon
+  CLI'dan doğrudan tetiklemiyoruz çünkü port keşfi kırılgan olurdu.
+- **Veri evi launcher'a bağlıdır**: bundled kip `MiMo-Code-main/.dev-home/data`,
+  PATH'teki `mimo` XDG (`~/.local/share/mimocode`). `caphlon compose runs`
+  launcher'la AYNI eve bakar; `MIMOCODE_HOME` env ile sabitlenebilir.
+- `{error:"verify-exhausted"}` dönüşü DB'de "completed" görünür (script throw
+  etmez) ve top-level sonuç DB'ye/journal'a yazılmaz — sonuca erişim oturum
+  mesajı üzerindendir.
