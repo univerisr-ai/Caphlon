@@ -12,7 +12,7 @@
 | Araç (gerçek kod) | Aldığımız en iyi yan | Caphlon girişi | Nasıl çağrılır (wiring) |
 |---|---|---|---|
 | **OpenCode** (`core/opencode-main`) | Terminal arayüzü (TUI) — birebir | `caphlon ui` / `caphlon tui` | `commands/ui.ts` → gerçek `opencode` TUI'sini başlatır, bağlı modeli `--model provider/model` ile geçirir |
-| **Aider** (`core/aider-main`) | Git-farkındalıklı AI çift-programlama, doğrudan dosya editleme | `caphlon code` | `commands/code.ts` → gerçek `aider` / `python -m aider` spawn eder, bağlı modeli `--model` ile geçirir |
+| **Aider** (`core/aider-main`) | Git-farkındalıklı AI çift-programlama, doğrudan dosya editleme | `caphlon code` + TUI içinde `aider_edit` (otomatik) | `commands/code.ts` → gerçek `aider` spawn; ayrıca `mcp/aider-mcp.ts` stdio köprüsü aider'ı OpenCode'a ARAÇ olarak bağlar (headless `--message`, git commit'li) |
 | **Qualixar OS** (`core/qualixar-os-main`) | Çoklu-ajan orkestrasyon, Judge pipeline, dashboard | `caphlon dev`, `caphlon run` | `qos-bridge.ts` → `bin/qos.js serve` alt süreci |
 | **MiMo Code** (`MiMo-Code-main`) | Kalıcı hafıza (MEMORY.md), Compose workflow, Dream/Distill | `caphlon compose`, `caphlon init` | compose topolojisi + MEMORY.md şablonu |
 | **Open Design** (`open-design-main`) | 100+ tasarım skill'i, marka sistemleri, HTML→MP4 | `caphlon design` | `od` daemon (port 7456) / MCP köprüsü |

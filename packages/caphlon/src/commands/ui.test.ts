@@ -18,8 +18,13 @@ import { join } from 'node:path';
 
 process.env.CAPHLON_HOME = mkdtempSync(join(tmpdir(), 'caphlon-ui-test-'));
 
-const { reconcileSkillsInstruction, reconcileTokenlessMcp, reconcileOpenDesignMcp, ensureProfileConfig } =
-  await import('./ui.js');
+const {
+  reconcileSkillsInstruction,
+  reconcileTokenlessMcp,
+  reconcileOpenDesignMcp,
+  reconcileAiderMcp,
+  ensureProfileConfig,
+} = await import('./ui.js');
 
 function freshProfile(cfg: unknown): string {
   const dir = mkdtempSync(join(tmpdir(), 'caphlon-ui-profile-'));
@@ -85,6 +90,20 @@ test('reconcileOpenDesignMcp: hazırsa od.mjs mcp live-artifacts girdisi yazıl�
     assert.deepEqual(cfg.mcp.opendesign.command.slice(2), ['mcp', 'live-artifacts']);
   } else {
     assert.equal(cfg.mcp?.opendesign, undefined);
+  }
+});
+
+test('reconcileAiderMcp: hazırsa node köprüsü yazılır, değilse girdi temizlenir', () => {
+  const dir = freshProfile({ mcp: { aider: { type: 'local', command: ['eski'], enabled: true } } });
+  const ready = reconcileAiderMcp(dir);
+  const cfg = readCfg(dir);
+  if (ready) {
+    assert.equal(cfg.mcp.aider.command[0], 'node');
+    assert.match(cfg.mcp.aider.command[1], /aider-mcp\.js$/);
+    assert.equal(cfg.mcp.aider.timeout, 600000);
+  } else {
+    // hazır değilse (örn. dist derlenmemiş / aider yok) bayat girdi BIRAKILMAZ
+    assert.equal(cfg.mcp?.aider, undefined);
   }
 });
 

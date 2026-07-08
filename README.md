@@ -29,6 +29,12 @@ node packages/caphlon/bin/caphlon.js doctor
 cd packages/caphlon && npm link
 ```
 
+> **No subcommands to memorize:** just run `caphlon` and talk. Inside the chat,
+> a design request ("build me a Reddit-like landing page") auto-engages Open
+> Design, and heavy multi-file code changes auto-engage the real Aider (the
+> agent calls the `aider_edit` tool itself). Subcommands below remain for
+> direct access.
+
 ## Architecture
 
 ```
