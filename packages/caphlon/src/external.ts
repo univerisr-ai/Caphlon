@@ -13,9 +13,21 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import chalk from 'chalk';
 
-/** packages/caphlon/dist/* → proje kökü */
+/**
+ * Platform kökü — vendored araçların (core/*, MiMo-Code-main, open-design-main)
+ * yaşadığı yer. Çözüm sırası:
+ *  1. CAPHLON_PLATFORM env — kullanıcı sabitlemesi (test/özel kurulum)
+ *  2. paket-göreli repo kökü — kaynaktan klonla çalışırken (git checkout)
+ *  3. ~/.caphlon/platform — global npm kurulumunda `caphlon setup`un kurduğu ev
+ * "Repo kökü" tespiti içerikle yapılır (scripts/setup-cores.sh var mı) — global
+ * node_modules altında 2. adım doğal olarak tutmaz, 3'e düşülür.
+ */
 export function projectRoot(): string {
-  return resolve(import.meta.dirname, '..', '..', '..');
+  const env = process.env.CAPHLON_PLATFORM;
+  if (env) return env;
+  const rel = resolve(import.meta.dirname, '..', '..', '..');
+  if (existsSync(join(rel, 'scripts', 'setup-cores.sh'))) return rel;
+  return join(homedir(), '.caphlon', 'platform');
 }
 
 /** Bir komut PATH'te çalışıyor mu? (probe ile) */
