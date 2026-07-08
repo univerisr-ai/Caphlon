@@ -17,6 +17,10 @@ say()  { printf "\033[36m▶ %s\033[0m\n" "$1"; }
 ok()   { printf "\033[32m✓ %s\033[0m\n" "$1"; }
 warn() { printf "\033[33m! %s\033[0m\n" "$1"; }
 
+# --- 0. Vendored araçlar (yoksa upstream'den indir; idempotent) ---------------
+# --all bayrağı fetch-cores'a aynen geçer (deneysel katman dahil olur).
+bash "$ROOT/scripts/fetch-cores.sh" "${1:-}"
+
 # --- 1. Caphlon CLI ----------------------------------------------------------
 say "Caphlon CLI (packages/caphlon) — install + build"
 ( cd packages/caphlon && npm install --no-audit --no-fund && npm run build )

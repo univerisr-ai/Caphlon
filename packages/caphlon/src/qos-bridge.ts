@@ -11,6 +11,7 @@ import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { activeModelEnv, getActiveModel, type ActiveModel } from './config/active.js';
 import { caphlonHome } from './config/store.js';
+import { projectRoot } from './external.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -140,9 +141,9 @@ async function healthOk(port: number, timeoutMs = 2000): Promise<boolean> {
 // Paths
 // ---------------------------------------------------------------------------
 
-/** Root directory of this project (packages/caphlon/../../) */
+/** Platform kökü — merkez çözüm (env → repo → ~/.caphlon/platform). */
 function findProjectRoot(): string {
-  return resolve(import.meta.dirname, '..', '..', '..');
+  return projectRoot();
 }
 
 /** Qualixar OS dizinini bul */

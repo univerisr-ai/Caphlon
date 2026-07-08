@@ -17,15 +17,16 @@ import { join, resolve } from 'node:path';
 import chalk from 'chalk';
 import { getActiveModel, aiderModelString } from '../config/active.js';
 import { skillContextPaths } from '../config/skills.js';
+import { projectRoot } from '../external.js';
 
 /** core/aider-main relative to packages/caphlon/dist/commands → project root */
 function aiderRepoDir(): string {
-  return resolve(import.meta.dirname, '..', '..', '..', '..', 'core', 'aider-main');
+  return join(projectRoot(), 'core', 'aider-main');
 }
 
 /** Caphlon'un aider için kurduğu yerel venv (caphlon code kurulum yolu). */
 function aiderVenvDir(): string {
-  return resolve(import.meta.dirname, '..', '..', '..', '..', 'core', 'aider-venv');
+  return join(projectRoot(), 'core', 'aider-venv');
 }
 
 /** Decide how to launch the real aider: venv → PATH → bundled module → none.

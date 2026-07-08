@@ -11,13 +11,14 @@
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, join } from 'node:path';
 import chalk from 'chalk';
 import { getActiveModel, aiderModelString } from '../config/active.js';
 import { DEFAULT_GATEWAY, detectTools, getAdapter } from '../config/tools.js';
+import { projectRoot } from '../external.js';
 
 function litellmBin(): string | null {
-  const p = resolve(import.meta.dirname, '..', '..', '..', '..', 'core', 'aider-venv', 'bin', 'litellm');
+  const p = join(projectRoot(), 'core', 'aider-venv', 'bin', 'litellm');
   return existsSync(p) ? p : null;
 }
 

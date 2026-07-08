@@ -7,6 +7,7 @@
 
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
+import { setupCommand } from './commands/setup.js';
 import { devCommand } from './commands/dev.js';
 import { runTask } from './qos-bridge.js';
 import { statusCommand } from './commands/status.js';
@@ -42,6 +43,17 @@ export async function run(): Promise<void> {
   program.action(async () => {
     await startCommand();
   });
+
+  // -----------------------------------------------------------------------
+  // caphlon setup — npm kurulumundan tam platforma (dışarıdan kurulum yolu)
+  // -----------------------------------------------------------------------
+  program
+    .command('setup')
+    .description('Platformu kur: gerçek araçları indir + derle (idempotent; npm kurulumu sonrası tek adım)')
+    .option('--all', 'Deneysel katmanı da indir (Hermes/Flower/tokenless)')
+    .action(async (options) => {
+      await setupCommand(options);
+    });
 
   // -----------------------------------------------------------------------
   // caphlon init — Initialize a new project

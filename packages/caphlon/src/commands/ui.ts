@@ -17,6 +17,7 @@ import chalk from 'chalk';
 import { getActiveModel, opencodeModelString } from '../config/active.js';
 import { tokenlessBinaryPath } from './tokenless.js';
 import { resolveAiderLauncher } from './code.js';
+import { projectRoot } from '../external.js';
 import { writeSkillsIndex, listSkills } from '../config/skills.js';
 
 /**
@@ -48,12 +49,12 @@ export function reconcileSkillsInstruction(profile: string): number {
 
 /** core/opencode-main relative to packages/caphlon/dist/commands → project root */
 function opencodeRepoDir(): string {
-  return resolve(import.meta.dirname, '..', '..', '..', '..', 'core', 'opencode-main');
+  return join(projectRoot(), 'core', 'opencode-main');
 }
 
-/** Proje kökü (dist/commands → 4 yukarı) */
+/** Platform kökü — merkez çözüm (env → repo → ~/.caphlon/platform). */
 function projRoot(): string {
-  return resolve(import.meta.dirname, '..', '..', '..', '..');
+  return projectRoot();
 }
 
 /**

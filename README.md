@@ -16,18 +16,28 @@ AI models to their peak — without needing massive hardware or budgets.
 
 ## Getting Started
 
-> Note: the package isn't published on npm yet; installation is from source.
-> Since the vendored tools (`core/*`) aren't part of the package, a global
-> install like `npx caphlon` isn't supported today.
+```bash
+npm install -g caphlon   # the CLI
+caphlon setup            # downloads + builds the platform (real tools) — idempotent
+caphlon connect          # bind a model provider + API key (once)
+caphlon                  # talk
+```
+
+`caphlon setup` clones the platform into `~/.caphlon/platform` (override with
+`CAPHLON_PLATFORM`) and fetches the real vendored tools from their upstreams
+(OpenCode, Aider, Qualixar, MiMo, Open Design; add the experimental layer with
+`caphlon setup --all`). Re-running it is safe — it only fills gaps.
+
+<details>
+<summary>From source instead (contributors)</summary>
 
 ```bash
 git clone https://github.com/univerisr-ai/Caphlon.git && cd Caphlon
-bash scripts/setup-cores.sh        # CLI build + Qualixar + Aider/LiteLLM + Hermes (idempotent)
+bash scripts/setup-cores.sh        # fetch tools + build (idempotent)
 node packages/caphlon/bin/caphlon.js doctor
-
-# Optional: to use `caphlon` / `caph` from anywhere
-cd packages/caphlon && npm link
+cd packages/caphlon && npm link    # optional: `caphlon` from anywhere
 ```
+</details>
 
 > **No subcommands to memorize:** just run `caphlon` and talk. Inside the chat,
 > a design request ("build me a Reddit-like landing page") auto-engages Open
