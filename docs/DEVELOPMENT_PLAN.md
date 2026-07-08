@@ -198,3 +198,7 @@ Hiçbir kopya bu kararla silinmedi — bu bir etiketleme, temizlik değil.
 - **origin/main:** terk edilmiş Ink+React TUI dalı (2 merge edilmemiş commit).
   Silme/arşivleme kullanıcı kararı.
 - **compose verify izolasyonu:** P1-3 notundaki tek kalan uç.
+- **opencode caphlon-ui.patch bayat (2026-07-09 taze-kurulum provası):** upstream
+  sst/opencode ilerlediği için tema/kimlik yaması taze indirmeye uygulanamıyor —
+  taze kullanıcı işlevsel ama vanilya görünümlü TUI alır (profil teması yine
+  yüklenir). Yamanın güncel upstream'e karşı yeniden üretilmesi gerekiyor.
