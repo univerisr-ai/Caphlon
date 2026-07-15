@@ -20,8 +20,9 @@ const hasPython = spawnSync('python3', ['--version'], { stdio: 'ignore' }).statu
 let child: ChildProcess | null = null;
 let base = '';
 
-async function startHub(): Promise<void> {
+async function startHub(token?: string): Promise<void> {
   const tmp = mkdtempSync(join(tmpdir(), 'caphlon-hub-test-'));
+  const tok = token ? `, token=${JSON.stringify(token)}` : '';
   child = spawn(
     'python3',
     [
@@ -29,7 +30,7 @@ async function startHub(): Promise<void> {
       // port 0 → OS seçer; gerçek portu stdout'a yaz, sonra serve_forever.
       `import sys; sys.path.insert(0, ${JSON.stringify(CORE)})\n` +
         `from hive_server import build_server\n` +
-        `httpd, _ = build_server('127.0.0.1', 0, ${JSON.stringify(tmp)}, 3)\n` +
+        `httpd, _ = build_server('127.0.0.1', 0, ${JSON.stringify(tmp)}, 3${tok})\n` +
         `print(httpd.server_address[1], flush=True)\n` +
         `httpd.serve_forever()\n`,
     ],
@@ -72,6 +73,23 @@ test('Merkez entegrasyonu: contribute → borrow → report (canlı koordinatör
     // sır kapısı 422
     const bad = await hubContribute(base, 'anahtar sorusu bir iki uc', 'AKIAABCDEFGHIJKLMNOP kullan');
     assert.equal(bad.status, 'rejected');
+  } finally {
+    child?.kill('SIGKILL');
+  }
+});
+
+test('token korumalı Merkez: token yok → rejected (yönlendirmeli), doğru token → çalışır', { skip: !hasPython }, async () => {
+  await startHub('entegrasyon-token');
+  try {
+    // token'sız: 401 → rejected + yönlendirme mesajı
+    const noTok = await hubContribute(base, 'soru bir iki uc dort', 'cevap');
+    assert.equal(noTok.status, 'rejected');
+    assert.match((noTok as any).detail, /kimlik/);
+    // doğru token: akış normal
+    const ok = await hubContribute(base, 'soru bir iki uc dort', 'cevap', 'n1', 'entegrasyon-token');
+    assert.equal(ok.status, 'hit');
+    const b = await hubBorrow(base, 'soru bir iki uc dort', 'entegrasyon-token');
+    assert.equal(b.status, 'hit');
   } finally {
     child?.kill('SIGKILL');
   }

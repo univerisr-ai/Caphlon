@@ -55,7 +55,7 @@ export async function hiveCommand(sub: string | undefined, args: string[]): Prom
   serve   [--port 8777] [--quorum 3]     Koordinatörü başlat
   join    --id <ad> [--model-cmd "..."]  Düğüm olarak katıl
   ask     "<soru>" [--server URL]        Kovana sor (konsensüs)
-  hub     [url|off]                      Çözüm-cache Merkez'ini ayarla/göster (cache_borrow Kovan'a düşer)
+  hub     [url|off] [--token T]          Çözüm-cache Merkez'ini ayarla/göster (dış hostta token zorunlu)
   train   [--min-score 1.5]              Konsensüs → LoRA eğitim verisi
   submit-delta --id <ad> --delta f.json  Lokal LoRA delta'sını gönder (federated)
   pull    [--out f.json]                 Güncel global adapter'ı indir
@@ -79,12 +79,14 @@ Tipik akış (tek makinede dene):
       return;
     }
     if (val === 'off') {
-      saveConfig({ ...cfg, cacheHub: null });
+      saveConfig({ ...cfg, cacheHub: null, cacheHubToken: null });
       console.log('Çözüm-cache Merkez bağlantısı kapatıldı (yerel mod).');
       return;
     }
-    saveConfig({ ...cfg, cacheHub: val });
-    console.log(`Çözüm-cache Merkez'i ayarlandı: ${val}`);
+    const tIdx = args.indexOf('--token');
+    const token = tIdx >= 0 ? (args[tIdx + 1] ?? null) : cfg.cacheHubToken;
+    saveConfig({ ...cfg, cacheHub: val, cacheHubToken: token });
+    console.log(`Çözüm-cache Merkez'i ayarlandı: ${val}${token ? ' (token kayıtlı)' : ''}`);
     console.log('Artık cache_borrow yerel ıskada Kovan\'a sorar; cache_contribute Kovan\'a da gönderir.');
     return;
   }

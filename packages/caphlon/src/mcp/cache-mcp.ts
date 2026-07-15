@@ -101,11 +101,12 @@ function getCache(): DualCache {
   return cache;
 }
 
-function hubUrl(): string | null {
+function hubCfg(): { url: string | null; token: string | null } {
   try {
-    return loadConfig().cacheHub;
+    const c = loadConfig();
+    return { url: c.cacheHub, token: c.cacheHubToken };
   } catch {
-    return null;
+    return { url: null, token: null };
   }
 }
 
@@ -113,7 +114,7 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<Mc
   if (!DualCache.available()) {
     return textResult('cache devre dışı: node:sqlite yok (Node 22.13+/23.4+ gerekir)', true);
   }
-  const hub = hubUrl();
+  const { url: hub, token } = hubCfg();
   const node = hostname();
   try {
     if (name === 'cache_borrow') {
@@ -129,7 +130,7 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<Mc
       // Yerel ıska → Merkez ayarlıysa Kovan'a sor (ödünç kopya yerel havuza YAZILMAZ —
       // kanonik kopya Merkez'de kalır; rapor hub: önekiyle Merkez'e döner).
       if (hub) {
-        const h = await hubBorrow(hub, instruction);
+        const h = await hubBorrow(hub, instruction, token);
         if (h.status === 'hit') {
           return textResult(
             `HIT (Merkez/Kovan, benzerlik ${(h.value.similarity * 100).toFixed(0)}%, skor ${h.value.score.toFixed(1)})\n` +
@@ -149,7 +150,7 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<Mc
       const correction = args.correction ? String(args.correction) : undefined;
       if (entryId.startsWith('hub:')) {
         if (!hub) return textResult('hata: hub: girdisi ama Merkez ayarlı değil (caphlon hive hub <url>)', true);
-        const r = await hubReport(hub, Number(entryId.slice(4)), worked, correction, node);
+        const r = await hubReport(hub, Number(entryId.slice(4)), worked, correction, node, token);
         if (r.status === 'hit') return textResult(`Merkez: ${r.value.action}`);
         if (r.status === 'rejected') return textResult(r.detail, true);
         if (r.status === 'miss') return textResult(`Merkez: kayıt bulunamadı (${entryId})`, true);
@@ -164,7 +165,7 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<Mc
       const id = getCache().record(instruction, output, 'technical'); // yerel sır kapısı burada
       let extra = '';
       if (hub) {
-        const h = await hubContribute(hub, instruction, output, node);
+        const h = await hubContribute(hub, instruction, output, node, token);
         extra =
           h.status === 'hit'
             ? ` · Merkez'e de gönderildi (hub:${h.value.id})`

@@ -56,6 +56,8 @@ export interface CaphlonConfig {
    * Merkez'e sorar, cache_contribute Merkez'e de gönderir (sır kapılı).
    */
   cacheHub: string | null;
+  /** Merkez Bearer token'ı (dış barındırmada zorunlu; localhost'ta opsiyonel). */
+  cacheHubToken: string | null;
 }
 
 const DEFAULT_CONFIG: CaphlonConfig = {
@@ -65,6 +67,7 @@ const DEFAULT_CONFIG: CaphlonConfig = {
   judgeModel: null,
   providers: {},
   cacheHub: null,
+  cacheHubToken: null,
 };
 
 // ---------------------------------------------------------------------------
