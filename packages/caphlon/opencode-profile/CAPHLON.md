@@ -48,6 +48,18 @@ Kullanıcı şu komutlara sahip (her biri gerçek bir aracı wire eder):
 
 Bağlı model (caphlon connect) tüm bu araçlarda otomatik kullanılır.
 
+## Token-Tasarruf Döngüsü (HER TEKNİK PROBLEMDE — zorunlu sıra)
+
+Herhangi bir teknik problemi (hata mesajı, config sorunu, araç kullanımı,
+how-to) çözmeye başlamadan ÖNCE `cache_borrow` çağır — kısa, genelleştirilmiş
+problem cümlesiyle. İsabette dönen çözümü uygula, doğrula, sonra MUTLAKA
+`cache_report` çağır: işe yaradıysa worked=true; yaramadıysa worked=false +
+kendi çalışan düzeltmen `correction` içinde. Hiçbir ödünç raporsuz kalmaz.
+Iskalarsa kendin çöz; çözüm yeniden kullanılabilir ve SIRSIZ ise
+`cache_contribute` ile paylaş (anahtar/token/kişisel veri asla girmez — sır
+kapısı reddederse maskele ve yeniden dene). Salt kişisel/proje-özel notlar
+`cache_remember`'a (yerel kalır, paylaşılmaz).
+
 ## Araç Yönlendirme (OTOMATİK — kullanıcı komut ezberlemez)
 
 Kullanıcı NE istediğini söyler; doğru aracı SEN seçer ve çağırırsın. Kullanıcıyı

@@ -202,3 +202,21 @@ Hiçbir kopya bu kararla silinmedi — bu bir etiketleme, temizlik değil.
   sst/opencode ilerlediği için tema/kimlik yaması taze indirmeye uygulanamıyor —
   taze kullanıcı işlevsel ama vanilya görünümlü TUI alır (profil teması yine
   yüklenir). Yamanın güncel upstream'e karşı yeniden üretilmesi gerekiyor.
+
+
+---
+
+## Token-Tasarruf Cache — Merkez kararı (2026-07-10)
+
+Project-egos-opt'un ölçülmüş mimarisi Caphlon'un KENDİ katmanı olarak kuruldu
+(egos dahil edilmedi; desen zaten hive_cache.py'den doğmuştu, olgun hali geri
+taşındı). **Merkez = yerel çift-cache** (`$CAPHLON_HOME/cache/{personal,technical}.db`,
+node:sqlite, sıfır bağımlılık): isabet kazancı yereldir, tek kullanıcıda ilk
+günden çalışır, sunucu şartı yok. **Paylaşım omurgası = Kovan koordinatörü
+(Faz 2):** contribute/borrow endpoint'leri mevcut hive_server'a eklenecek
+(quorum+itibar+honeypot hazır); şema alanları uyumlu tutuldu (Jaccard 0.72).
+
+Kurulanlar: DualCache (kişisel/teknik ayrımı, sır kapısı, borrow→report,
+düzeltme akışı, est_tokens_saved), cache-mcp köprüsü (4 araç), CAPHLON.md
+zorunlu yaşam döngüsü talimatı, status Cache paneli. Benzerlik: stopword
+eleme + max(Jaccard, containment≥4-kelime) — parafraz isabeti e2e doğrulandı.

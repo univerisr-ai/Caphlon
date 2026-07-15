@@ -5,6 +5,7 @@
 import { getStatus, checkOpenDesign } from '../qos-bridge.js';
 import { getActiveModel, getJudgeModel } from '../config/active.js';
 import { syncStatus } from '../config/skills.js';
+import { DualCache } from '../cache/dual-cache.js';
 import { heading, kv, panel } from '../ui/theme.js';
 
 /**
@@ -30,6 +31,24 @@ export function renderConnectionLines(): string[] {
         : '— active model (separate: caphlon connect --judge)',
     ),
   ];
+}
+
+/** Token-tasarruf cache özeti (borrow→report döngüsünün gerçek sayaçları). */
+export function renderCacheLines(): string[] {
+  if (!DualCache.available()) {
+    return [kv('Status', 'ℹ️ kapalı (node:sqlite ister — Node 22.13+/23.4+)')];
+  }
+  const c = new DualCache();
+  try {
+    const s = c.stats();
+    const rate = s.borrows > 0 ? ` · isabet sonrası başarı ${s.worked}/${s.borrows}` : '';
+    return [
+      kv('Entries', `${s.technical} teknik + ${s.personal} kişisel`),
+      kv('Saved', `~${s.estTokensSaved.toLocaleString('en-US')} token${rate}`),
+    ];
+  } finally {
+    c.close();
+  }
 }
 
 /** Skill sayımı + Living Marketplace sync durumu. */
@@ -68,6 +87,9 @@ export async function statusCommand(): Promise<void> {
 
   // Skills + Living Marketplace sync
   console.log(panel('📚 Skills', renderSkillLines()));
+
+  // Token-tasarruf cache'i (borrow→report)
+  console.log(panel('🧠 Cache', renderCacheLines()));
 
   // Open Design
   const odLines = odAvailable
