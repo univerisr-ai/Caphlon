@@ -46,7 +46,7 @@ class HiveState:
 
     def __init__(self, data_dir: str, quorum: int, fed_quorum: int = 3,
                  eval_fn: Optional[Callable[[dict], float]] = None,
-                 min_improvement: float = 0.0):
+                 min_improvement: float = 0.0, token: Optional[str] = None):
         self.engine = HiveEngine(
             reputation=ReputationSystem(db_path=f"{data_dir}/reputation.db"),
             cache=SharedSolutionCache(db_path=f"{data_dir}/hive_cache.db"),
@@ -65,6 +65,9 @@ class HiveState:
         # adapter doğrulanmamış yayınlanır, dışsal /adapter/verify bekler.
         self.eval_fn = eval_fn
         self.min_improvement = min_improvement
+        # Kimlik kapısı (egos deseni): token ayarlıysa /health dışındaki HER yol
+        # Bearer ister (401). Localhost'ta opsiyonel, dış barındırmada ŞART.
+        self.token = token
 
     def submit_delta(self, vbs_id: str, vectors: dict) -> dict:
         """Bir düğümün lokal LoRA delta'sını al; fed_quorum dolunca birleştir+yayınla."""
@@ -164,9 +167,18 @@ def make_handler(state: HiveState):
             except json.JSONDecodeError:
                 return {}
 
+        def _authorized(self, path: str) -> bool:
+            if not state.token or path == "/health":
+                return True
+            got = (self.headers.get("Authorization") or "").removeprefix("Bearer ").strip()
+            import hmac
+            return bool(got) and hmac.compare_digest(got, state.token)
+
         # ---- GET ----
         def do_GET(self):
             path = urlparse(self.path).path
+            if not self._authorized(path):
+                return self._send(401, {"error": "kimlik gerekli (Bearer token)"})
             qs = parse_qs(urlparse(self.path).query)
             if path == "/health":
                 return self._send(200, {"ok": True})
@@ -206,6 +218,8 @@ def make_handler(state: HiveState):
         # ---- POST ----
         def do_POST(self):
             path = urlparse(self.path).path
+            if not self._authorized(path):
+                return self._send(401, {"error": "kimlik gerekli (Bearer token)"})
             data = self._body()
             if path == "/register":
                 vbs = str(data.get("vbs_id", "")).strip()
@@ -317,9 +331,9 @@ def make_handler(state: HiveState):
 
 def build_server(host: str, port: int, data_dir: str, quorum: int, fed_quorum: int = 3,
                  eval_fn: Optional[Callable[[dict], float]] = None,
-                 min_improvement: float = 0.0):
+                 min_improvement: float = 0.0, token: Optional[str] = None):
     state = HiveState(data_dir, quorum, fed_quorum=fed_quorum,
-                      eval_fn=eval_fn, min_improvement=min_improvement)
+                      eval_fn=eval_fn, min_improvement=min_improvement, token=token)
     httpd = HTTPServer((host, port), make_handler(state))
     return httpd, state
 
@@ -331,11 +345,28 @@ def main():
     ap.add_argument("--data-dir", default="./data")
     ap.add_argument("--quorum", type=int, default=3, help="Otomatik karar için min cevap sayısı")
     ap.add_argument("--fed-quorum", type=int, default=3, help="Federated birleştirme için min delta sayısı")
+    ap.add_argument("--token", default=None, help="Bearer token (dış barındırmada zorunlu; boşsa dış hostta otomatik üretilir)")
     args = ap.parse_args()
 
     import os
     os.makedirs(args.data_dir, exist_ok=True)
-    httpd, _ = build_server(args.host, args.port, args.data_dir, args.quorum, args.fed_quorum)
+    # Token çözümü: --token > HIVE_TOKEN env > (dış host ise) otomatik üret+kalıcılaştır.
+    # 127.0.0.1'de token'sız çalışmak OK (yerel deneme); 0.0.0.0/dış IP'de ASLA açık kapı bırakma.
+    token = args.token or os.environ.get("HIVE_TOKEN") or None
+    token_file = os.path.join(args.data_dir, "hub.token")
+    if not token and args.host != "127.0.0.1":
+        if os.path.exists(token_file):
+            token = open(token_file).read().strip()
+        else:
+            import secrets
+            token = secrets.token_urlsafe(32)
+            with open(token_file, "w") as f:
+                f.write(token)
+            os.chmod(token_file, 0o600)
+        print(f"🔐 Dış host algılandı — Bearer token zorunlu kılındı (dosya: {token_file})")
+        print(f"   İstemci bağlama: caphlon hive hub http://{args.host}:{args.port} --token <token>")
+    httpd, _ = build_server(args.host, args.port, args.data_dir, args.quorum, args.fed_quorum,
+                            token=token)
     print(f"🐝 Kovan koordinatörü: http://{args.host}:{args.port}  (quorum={args.quorum}, data={args.data_dir})")
     print("   POST /ask · /answer · /register · GET /pending · /stats · /health   (Ctrl-C ile dur)")
     try:

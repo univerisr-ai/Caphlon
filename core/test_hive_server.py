@@ -192,5 +192,57 @@ class CacheMerkezTest(unittest.TestCase):
         self.assertIn("DOGRU", body["output"])
 
 
+
+class AuthTest(unittest.TestCase):
+    """Kimlik kapısı: token ayarlıysa /health hariç her yol Bearer ister."""
+
+    def setUp(self):
+        import tempfile, threading
+        tmp = tempfile.mkdtemp()
+        self.httpd, self.state = build_server("127.0.0.1", 0, tmp, quorum=3, token="gizli-test-token")
+        self.port = self.httpd.server_address[1]
+        self.base = f"http://127.0.0.1:{self.port}"
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+
+    def tearDown(self):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+    def _req(self, path, payload=None, token=None):
+        import json as _json, urllib.request, urllib.error
+        headers = {"Content-Type": "application/json"}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        req = urllib.request.Request(
+            self.base + path,
+            data=_json.dumps(payload).encode() if payload is not None else None,
+            headers=headers, method="POST" if payload is not None else "GET")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as r:
+                return r.status, _json.loads(r.read() or b"{}")
+        except urllib.error.HTTPError as e:
+            return e.code, _json.loads(e.read() or b"{}")
+
+    def test_health_tokensiz_acik(self):
+        code, body = self._req("/health")
+        self.assertEqual(code, 200)
+
+    def test_tokensiz_401_tokenli_200(self):
+        code, _ = self._req("/stats")
+        self.assertEqual(code, 401)
+        code, _ = self._req("/cache/borrow", {"instruction": "bir soru iki uc dort"})
+        self.assertEqual(code, 401)
+        code, _ = self._req("/stats", token="gizli-test-token")
+        self.assertEqual(code, 200)
+        code, body = self._req("/cache/contribute",
+                               {"instruction": "soru bir iki uc dort", "output": "cevap"},
+                               token="gizli-test-token")
+        self.assertEqual(code, 200)
+
+    def test_yanlis_token_401(self):
+        code, _ = self._req("/stats", token="yanlis")
+        self.assertEqual(code, 401)
+
+
 if __name__ == "__main__":
     unittest.main()
