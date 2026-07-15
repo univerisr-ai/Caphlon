@@ -126,7 +126,10 @@ caphlon init         # Initialize a project
 > regenerating it (~80-90% tokens saved per hit, measured model). Every borrow
 > closes with `cache_report` (worked / failed + correction), so broken
 > knowledge can't poison the pool. Personal notes never leave the machine;
-> shared entries pass a secret-scan gate. See `caphlon status` → Cache panel.
+> shared entries pass a secret-scan gate. Optional multi-user sharing: point it
+> at a Hive coordinator with `caphlon hive hub <url>` — local misses then fall
+> back to the swarm pool (reputation-weighted, server-side secret gate too).
+> See `caphlon status` → Cache panel.
 
 > Every component binds to a single model: connect once with `caphlon connect`
 > and Qualixar OS / Aider / the orchestrator all use the same one. Details:
