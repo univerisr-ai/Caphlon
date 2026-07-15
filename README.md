@@ -121,6 +121,13 @@ caphlon init         # Initialize a project
 > **Blind verification:** the producer can't grade its own work. Connect a
 > separate judge model and use max: `caphlon connect groq --judge` → `caphlon max "task"`.
 
+> **Token-saving cache:** before solving any technical problem, the agent calls
+> `cache_borrow` — a hit returns a previously verified solution instead of
+> regenerating it (~80-90% tokens saved per hit, measured model). Every borrow
+> closes with `cache_report` (worked / failed + correction), so broken
+> knowledge can't poison the pool. Personal notes never leave the machine;
+> shared entries pass a secret-scan gate. See `caphlon status` → Cache panel.
+
 > Every component binds to a single model: connect once with `caphlon connect`
 > and Qualixar OS / Aider / the orchestrator all use the same one. Details:
 > [docs/integration/BEST_OF_BREED.md](docs/integration/BEST_OF_BREED.md)

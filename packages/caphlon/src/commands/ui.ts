@@ -18,6 +18,7 @@ import { getActiveModel, opencodeModelString } from '../config/active.js';
 import { tokenlessBinaryPath } from './tokenless.js';
 import { resolveAiderLauncher } from './code.js';
 import { projectRoot } from '../external.js';
+import { DualCache } from '../cache/dual-cache.js';
 import { writeSkillsIndex, listSkills } from '../config/skills.js';
 
 /**
@@ -216,6 +217,43 @@ export function reconcileAiderMcp(profile: string): boolean {
   return ready;
 }
 
+/**
+ * Token-tasarruf cache'i: DualCache MCP köprüsünü bağla (node:sqlite varsa).
+ * Ajan her teknik problemde önce cache_borrow çağırır — isabet başına ~%80-90
+ * token tasarrufu (egos-ölçümlü model; kaynak: Project-egos-opt mimarisi).
+ */
+export function reconcileCacheMcp(profile: string): boolean {
+  const cfgPath = join(profile, 'opencode.json');
+  if (!existsSync(cfgPath)) return false;
+  let cfg: Record<string, any>;
+  try {
+    cfg = JSON.parse(readFileSync(cfgPath, 'utf8')) as Record<string, any>;
+  } catch {
+    return false;
+  }
+  const bridge = resolve(import.meta.dirname, '..', 'mcp', 'cache-mcp.js');
+  const ready = existsSync(bridge) && DualCache.available();
+
+  const before = JSON.stringify(cfg);
+  cfg.mcp ??= {};
+  migrateLegacyMcpServers(cfg);
+  if (ready) {
+    cfg.mcp.cache = {
+      type: 'local',
+      command: ['node', bridge],
+      enabled: true,
+      timeout: 60000,
+    };
+  } else {
+    delete cfg.mcp.cache;
+    if (cfg.mcp && Object.keys(cfg.mcp).length === 0) delete cfg.mcp;
+  }
+  if (JSON.stringify(cfg) !== before) {
+    writeFileSync(cfgPath, JSON.stringify(cfg, null, 2) + '\n');
+  }
+  return ready;
+}
+
 function findBun(): string | null {
   if (spawnSync('bun', ['--version'], { stdio: 'ignore' }).status === 0) return 'bun';
   const p = join(homedir(), '.bun', 'bin', 'bun');
@@ -290,6 +328,9 @@ export async function uiCommand(passthrough: string[]): Promise<void> {
   // kullanıcı komut ezberlemez, ajan gerektiğinde aider_edit'i kendisi çağırır.
   const aiderOn = reconcileAiderMcp(profile);
 
+  // Token-tasarruf cache'i: borrow→report döngüsü araç olarak bağlanır.
+  const cacheOn = reconcileCacheMcp(profile);
+
   if (active) {
     args.push('--model', opencodeModelString(active));
     if (active.apiKey) env[active.provider.envVar] = active.apiKey;
@@ -318,6 +359,9 @@ export async function uiCommand(passthrough: string[]): Promise<void> {
   }
   if (aiderOn) {
     console.log(chalk.green('   🤝 Aider bağlandı (kapsamlı kod değişikliğinde aider_edit otomatik)'));
+  }
+  if (cacheOn) {
+    console.log(chalk.green('   🧠 Çözüm cache bağlandı (borrow→report; isabet başına ~%80 token tasarrufu)'));
   }
   console.log('');
 
