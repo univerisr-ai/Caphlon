@@ -212,9 +212,17 @@ Project-egos-opt'un ölçülmüş mimarisi Caphlon'un KENDİ katmanı olarak kur
 (egos dahil edilmedi; desen zaten hive_cache.py'den doğmuştu, olgun hali geri
 taşındı). **Merkez = yerel çift-cache** (`$CAPHLON_HOME/cache/{personal,technical}.db`,
 node:sqlite, sıfır bağımlılık): isabet kazancı yereldir, tek kullanıcıda ilk
-günden çalışır, sunucu şartı yok. **Paylaşım omurgası = Kovan koordinatörü
-(Faz 2):** contribute/borrow endpoint'leri mevcut hive_server'a eklenecek
-(quorum+itibar+honeypot hazır); şema alanları uyumlu tutuldu (Jaccard 0.72).
+günden çalışır, sunucu şartı yok. **Paylaşım omurgası = Kovan koordinatörü —
+Faz 2 KURULDU (2026-07-10):** `POST /cache/borrow|contribute|report` kapıları
+hive_server'a eklendi (sunucu tarafı sır kapısı 422, itibar-ağırlıklı skor;
+correction = kardeş satır → onay topladıkça güven ekonomisiyle doğal terfi,
+quorum'suz). İstemci: `hub-client.ts` (Merkez erişilemezse yerel mod kesintisiz
+sürer), `caphlon hive hub <url|off>`, cache-mcp yerel-ıska→Merkez düşüşü
+(`hub:<id>` raporlama; ödünç kopya yerel havuza yazılmaz — kanonik Merkez'de),
+status paneline Merkez satırı. Parafraz eşleşmesi (stopword+containment)
+hive_cache.py'ye de taşındı — iki katman aynı kararı verir. Kanıt: Python 21/21
+(4 yeni Merkez testi), TS 128/128 (canlı koordinatörle gerçek entegrasyon),
+MCP e2e: yerel ıska → Merkez %83 parafraz isabeti → rapor "confirmed".
 
 Kurulanlar: DualCache (kişisel/teknik ayrımı, sır kapısı, borrow→report,
 düzeltme akışı, est_tokens_saved), cache-mcp köprüsü (4 araç), CAPHLON.md
