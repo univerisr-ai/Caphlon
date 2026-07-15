@@ -50,6 +50,12 @@ export interface CaphlonConfig {
   judgeModel: string | null;
   /** Per-provider settings */
   providers: Record<string, ProviderSettings>;
+  /**
+   * Çözüm-cache Merkez'i (Kovan koordinatörü URL'i, örn. http://127.0.0.1:8777).
+   * null = tamamen yerel (varsayılan). Ayarlıysa cache_borrow yerel ıskada
+   * Merkez'e sorar, cache_contribute Merkez'e de gönderir (sır kapılı).
+   */
+  cacheHub: string | null;
 }
 
 const DEFAULT_CONFIG: CaphlonConfig = {
@@ -58,6 +64,7 @@ const DEFAULT_CONFIG: CaphlonConfig = {
   judgeProvider: null,
   judgeModel: null,
   providers: {},
+  cacheHub: null,
 };
 
 // ---------------------------------------------------------------------------

@@ -25,9 +25,25 @@ from typing import Optional
 
 _WORD = re.compile(r"[a-z0-9çğıöşü]+", re.IGNORECASE)
 
+# Soru/işlev kelimeleri benzerliği sulandırır ("nasıl çözülür" ≈ "çözümü
+# nedir"). Caphlon DualCache (TS istemci) ile AYNI liste — iki katman aynı
+# soruda aynı kararı versin.
+_STOPWORDS = frozenset({
+    # tr
+    "nasıl", "nasil", "nedir", "neden", "niçin", "nicin", "hangi", "için", "icin",
+    "gibi", "ile", "ve", "veya", "bir", "bu", "şu", "su", "da", "de", "ki", "en",
+    "ne", "mi", "mı", "mu", "mü", "ben", "sen",
+    # en
+    "how", "what", "why", "which", "the", "a", "an", "is", "are", "to", "of",
+    "and", "or", "for", "with", "in", "on", "do", "does", "can", "i",
+})
+
 
 def _tokens(text: str) -> set[str]:
-    return set(_WORD.findall(text.lower()))
+    all_toks = _WORD.findall(text.lower())
+    content = [t for t in all_toks if t not in _STOPWORDS]
+    # Tamamı stopword ise eleme yapma — boş küme hiçbir şeyle eşleşmez.
+    return set(content if content else all_toks)
 
 
 def _jaccard(a: set[str], b: set[str]) -> float:
@@ -38,6 +54,18 @@ def _jaccard(a: set[str], b: set[str]) -> float:
     inter = len(a & b)
     union = len(a | b)
     return inter / union if union else 0.0
+
+
+def _similarity(a: set[str], b: set[str]) -> float:
+    """max(Jaccard, containment). Containment (kesişim/küçük küme) kısa parafraz
+    sorguların uzun kayıtların alt kümesi olduğu durumu yakalar; ≥4 içerik
+    kelimesi freni aşırı eşleşmeyi önler. DualCache (TS) ile birebir aynı kural.
+    """
+    j = _jaccard(a, b)
+    if len(a) < 4 or len(b) < 4:
+        return j
+    inter = len(a & b)
+    return max(j, inter / min(len(a), len(b)))
 
 
 @dataclass
@@ -128,7 +156,7 @@ class SharedSolutionCache:
         for row in self._db.execute(
             "SELECT id, instruction, output, tokens, score, hits FROM solutions"
         ):
-            sim = _jaccard(q_tokens, set(row["tokens"].split()))
+            sim = _similarity(q_tokens, set(row["tokens"].split()))
             if sim < self.sim_threshold:
                 continue
             # Aynı benzerlikte daha çok onaylanmış (yüksek score) çözümü yeğle.
@@ -148,6 +176,44 @@ class SharedSolutionCache:
             )
             self._db.commit()
         return best
+
+    # ---- rapor (borrow→report döngüsünün Merkez ayağı) ---------------------
+
+    def report(self, solution_id: int, worked: bool,
+               correction: str | None = None, weight: float = 1.0) -> dict:
+        """Ödünç alınan çözümün sonucunu işle — güven ekonomisi.
+
+        worked=True: skor + itibar-ağırlığı (onaylayan ne kadar güvenilirse o
+        kadar güçlenir). worked=False: skor yarı ağırlık kadar erir (taban 0);
+        correction verilmişse AYNI soruya yeni bir çözüm satırı açılır —
+        lookup zaten (benzerlik, skor) sıralaması yaptığı için düzeltme onay
+        topladıkça kanonik cevabı doğal olarak devralır (quorum'suz, ölçülebilir
+        terfi; egos'un correction akışının Kovan karşılığı).
+        """
+        row = self._db.execute(
+            "SELECT id, instruction, score FROM solutions WHERE id=?",
+            (solution_id,),
+        ).fetchone()
+        if not row:
+            return {"ok": False, "error": f"kayıt yok: {solution_id}"}
+        now = time.time()
+        w = max(0.0, weight)
+        if worked:
+            self._db.execute(
+                "UPDATE solutions SET score=score+?, updated_at=? WHERE id=?",
+                (w, now, solution_id),
+            )
+            self._db.commit()
+            return {"ok": True, "action": "confirmed", "id": solution_id}
+        self._db.execute(
+            "UPDATE solutions SET score=MAX(0.0, score-?), updated_at=? WHERE id=?",
+            (w * 0.5, now, solution_id),
+        )
+        self._db.commit()
+        if correction and correction.strip():
+            new_id = self.record(row["instruction"], correction, weight=w)
+            return {"ok": True, "action": "corrected", "id": solution_id, "corrected_id": new_id}
+        return {"ok": True, "action": "penalized", "id": solution_id}
 
     def stats(self) -> dict:
         row = self._db.execute(

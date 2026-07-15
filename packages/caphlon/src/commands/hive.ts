@@ -55,6 +55,7 @@ export async function hiveCommand(sub: string | undefined, args: string[]): Prom
   serve   [--port 8777] [--quorum 3]     Koordinatörü başlat
   join    --id <ad> [--model-cmd "..."]  Düğüm olarak katıl
   ask     "<soru>" [--server URL]        Kovana sor (konsensüs)
+  hub     [url|off]                      Çözüm-cache Merkez'ini ayarla/göster (cache_borrow Kovan'a düşer)
   train   [--min-score 1.5]              Konsensüs → LoRA eğitim verisi
   submit-delta --id <ad> --delta f.json  Lokal LoRA delta'sını gönder (federated)
   pull    [--out f.json]                 Güncel global adapter'ı indir
@@ -65,6 +66,26 @@ Tipik akış (tek makinede dene):
   1) caphlon hive serve            # bir terminalde
   2) caphlon hive join --id n1     # başka terminallerde (n1, n2, n3...)
   3) caphlon hive ask "2+2 kactir?"`);
+    return;
+  }
+
+  // hub: çözüm-cache Merkez'i (DualCache Faz 2) — koordinatör URL'ini bağla/göster.
+  if (action === 'hub') {
+    const { loadConfig, saveConfig } = await import('../config/store.js');
+    const cfg = loadConfig();
+    const val = args[0]?.trim();
+    if (!val) {
+      console.log(cfg.cacheHub ?? '(Merkez ayarlı değil — tamamen yerel mod)');
+      return;
+    }
+    if (val === 'off') {
+      saveConfig({ ...cfg, cacheHub: null });
+      console.log('Çözüm-cache Merkez bağlantısı kapatıldı (yerel mod).');
+      return;
+    }
+    saveConfig({ ...cfg, cacheHub: val });
+    console.log(`Çözüm-cache Merkez'i ayarlandı: ${val}`);
+    console.log('Artık cache_borrow yerel ıskada Kovan\'a sorar; cache_contribute Kovan\'a da gönderir.');
     return;
   }
 

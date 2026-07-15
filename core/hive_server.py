@@ -35,7 +35,7 @@ from typing import Callable, Optional
 from urllib.parse import urlparse, parse_qs
 
 from hive_engine import HiveEngine, NodeAnswer
-from security import ReputationSystem, Honeypot
+from security import ReputationSystem, Honeypot, scan_secrets
 from hive_cache import SharedSolutionCache
 from adapter_registry import AdapterRegistry
 from fed_aggregate import federated_round
@@ -199,6 +199,7 @@ def make_handler(state: HiveState):
                 s = state.engine.stats()
                 s["adapter"] = state.registry.info()
                 s["fed_pending"] = len(state._deltas)
+                s["cache"] = state.engine.cache.stats()
                 return self._send(200, s)
             return self._send(404, {"error": "yol yok"})
 
@@ -256,6 +257,49 @@ def make_handler(state: HiveState):
                 if not vbs or not isinstance(vectors, dict) or not vectors:
                     return self._send(400, {"error": "vbs_id ve delta (dict) zorunlu"})
                 return self._send(200, state.submit_delta(vbs, vectors))
+
+            # ---- Çözüm cache Merkez kapıları (Caphlon DualCache Faz 2) ----
+            if path == "/cache/borrow":
+                instr = str(data.get("instruction", "")).strip()
+                if not instr:
+                    return self._send(400, {"error": "instruction zorunlu"})
+                hit = state.engine.cache.lookup(instr)
+                if hit is None:
+                    return self._send(404, {"miss": True})
+                return self._send(200, {
+                    "id": getattr(hit, "_id", None),
+                    "instruction": hit.instruction,
+                    "output": hit.output,
+                    "similarity": hit.similarity,
+                    "score": hit.score,
+                })
+
+            if path == "/cache/contribute":
+                instr = str(data.get("instruction", "")).strip()
+                out = str(data.get("output", "")).strip()
+                if not instr or not out:
+                    return self._send(400, {"error": "instruction ve output zorunlu"})
+                findings = scan_secrets(instr + "\n" + out)
+                if findings:
+                    return self._send(422, {"error": "sır kapısı", "findings": findings})
+                node = str(data.get("node_id", "")).strip()
+                weight = state.engine.rep.get_score(node) if node else 1.0
+                sid = state.engine.cache.record(instr, out, weight=max(0.1, weight))
+                return self._send(200, {"ok": True, "id": sid})
+
+            if path == "/cache/report":
+                sid = int(data.get("id", 0))
+                worked = bool(data.get("worked", False))
+                correction = data.get("correction")
+                if correction is not None:
+                    correction = str(correction)
+                    findings = scan_secrets(correction)
+                    if findings:
+                        return self._send(422, {"error": "sır kapısı", "findings": findings})
+                node = str(data.get("node_id", "")).strip()
+                weight = state.engine.rep.get_score(node) if node else 1.0
+                res = state.engine.cache.report(sid, worked, correction, weight=max(0.1, weight))
+                return self._send(200 if res.get("ok") else 404, res)
 
             if path == "/adapter/verify":
                 # Bağımsız bir eval süreci bir sürümü onaylayınca dağıtıma açar.

@@ -11,6 +11,30 @@ from pathlib import Path
 from typing import Optional
 
 
+# ---------------------------------------------------------------------------
+# Sır kapısı — paylaşım havuzuna anahtar/token sızmasın (sunucu tarafı katman).
+# İstemci (Caphlon DualCache) aynı desen ailesiyle zaten tarar; Merkez yine de
+# 422 ile reddeder — egos'un çift-katman garantisinin Kovan karşılığı.
+# ---------------------------------------------------------------------------
+
+SECRET_PATTERNS: list[tuple[str, re.Pattern]] = [
+    ("anthropic key", re.compile(r"sk-ant-[A-Za-z0-9-]{8,}")),
+    ("openrouter key", re.compile(r"sk-or-v1-[A-Za-z0-9]{8,}")),
+    ("openai-tarzı key", re.compile(r"sk-[A-Za-z0-9]{20,}")),
+    ("groq key", re.compile(r"gsk_[A-Za-z0-9]{16,}")),
+    ("xai key", re.compile(r"xai-[A-Za-z0-9]{16,}")),
+    ("aws key", re.compile(r"AKIA[0-9A-Z]{16}")),
+    ("github token", re.compile(r"(ghp_|github_pat_)[A-Za-z0-9_]{16,}")),
+    ("private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    ("bearer", re.compile(r"Bearer\s+[A-Za-z0-9._-]{20,}")),
+]
+
+
+def scan_secrets(text: str) -> list[str]:
+    """Metindeki gizli-anahtar desenlerinin adlarını döndürür (boş = temiz)."""
+    return [name for name, pat in SECRET_PATTERNS if pat.search(text)]
+
+
 @dataclass
 class ValidationResult:
     passed: bool

@@ -6,6 +6,8 @@ import { getStatus, checkOpenDesign } from '../qos-bridge.js';
 import { getActiveModel, getJudgeModel } from '../config/active.js';
 import { syncStatus } from '../config/skills.js';
 import { DualCache } from '../cache/dual-cache.js';
+import { hubReachable } from '../cache/hub-client.js';
+import { loadConfig } from '../config/store.js';
 import { heading, kv, panel } from '../ui/theme.js';
 
 /**
@@ -34,7 +36,7 @@ export function renderConnectionLines(): string[] {
 }
 
 /** Token-tasarruf cache özeti (borrow→report döngüsünün gerçek sayaçları). */
-export function renderCacheLines(): string[] {
+export async function renderCacheLines(): Promise<string[]> {
   if (!DualCache.available()) {
     return [kv('Status', 'ℹ️ kapalı (node:sqlite ister — Node 22.13+/23.4+)')];
   }
@@ -42,9 +44,14 @@ export function renderCacheLines(): string[] {
   try {
     const s = c.stats();
     const rate = s.borrows > 0 ? ` · isabet sonrası başarı ${s.worked}/${s.borrows}` : '';
+    const hub = loadConfig().cacheHub;
+    const hubLine = hub
+      ? kv('Merkez', `${hub} ${(await hubReachable(hub)) ? '✅' : '⚠️ erişilemiyor (yerel mod)'}`)
+      : kv('Merkez', '⬜ yok — tamamen yerel (bağla: caphlon hive hub <url>)');
     return [
       kv('Entries', `${s.technical} teknik + ${s.personal} kişisel`),
       kv('Saved', `~${s.estTokensSaved.toLocaleString('en-US')} token${rate}`),
+      hubLine,
     ];
   } finally {
     c.close();
@@ -89,7 +96,7 @@ export async function statusCommand(): Promise<void> {
   console.log(panel('📚 Skills', renderSkillLines()));
 
   // Token-tasarruf cache'i (borrow→report)
-  console.log(panel('🧠 Cache', renderCacheLines()));
+  console.log(panel('🧠 Cache', await renderCacheLines()));
 
   // Open Design
   const odLines = odAvailable

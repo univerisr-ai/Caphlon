@@ -12,6 +12,9 @@
 
 import { createInterface } from 'node:readline';
 import { DualCache } from '../cache/dual-cache.js';
+import { hubBorrow, hubContribute, hubReport } from '../cache/hub-client.js';
+import { loadConfig } from '../config/store.js';
+import { hostname } from 'node:os';
 
 const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
@@ -98,29 +101,80 @@ function getCache(): DualCache {
   return cache;
 }
 
-function callTool(name: string, args: Record<string, unknown>): McpResult {
+function hubUrl(): string | null {
+  try {
+    return loadConfig().cacheHub;
+  } catch {
+    return null;
+  }
+}
+
+async function callTool(name: string, args: Record<string, unknown>): Promise<McpResult> {
   if (!DualCache.available()) {
     return textResult('cache devre dışı: node:sqlite yok (Node 22.13+/23.4+ gerekir)', true);
   }
+  const hub = hubUrl();
+  const node = hostname();
   try {
     if (name === 'cache_borrow') {
-      const hit = getCache().borrow(String(args.instruction ?? ''));
-      if (!hit) return textResult('MISS — havuzda benzer çözüm yok. Kendin çöz; çözüm yeniden kullanılabilir ve sırsızsa cache_contribute ile paylaş.');
-      return textResult(
-        `HIT (benzerlik ${(hit.similarity * 100).toFixed(0)}%, güven +${hit.workedCount}/-${hit.failedCount})\n` +
-          `entry_id: ${hit.entryId}\n\nÇÖZÜM:\n${hit.output}\n\n` +
-          'Uygula ve doğrula; sonra MUTLAKA cache_report çağır (worked=true, ya da worked=false + correction).',
-      );
+      const instruction = String(args.instruction ?? '');
+      const hit = getCache().borrow(instruction);
+      if (hit) {
+        return textResult(
+          `HIT (yerel, benzerlik ${(hit.similarity * 100).toFixed(0)}%, güven +${hit.workedCount}/-${hit.failedCount})\n` +
+            `entry_id: ${hit.entryId}\n\nÇÖZÜM:\n${hit.output}\n\n` +
+            'Uygula ve doğrula; sonra MUTLAKA cache_report çağır (worked=true, ya da worked=false + correction).',
+        );
+      }
+      // Yerel ıska → Merkez ayarlıysa Kovan'a sor (ödünç kopya yerel havuza YAZILMAZ —
+      // kanonik kopya Merkez'de kalır; rapor hub: önekiyle Merkez'e döner).
+      if (hub) {
+        const h = await hubBorrow(hub, instruction);
+        if (h.status === 'hit') {
+          return textResult(
+            `HIT (Merkez/Kovan, benzerlik ${(h.value.similarity * 100).toFixed(0)}%, skor ${h.value.score.toFixed(1)})\n` +
+              `entry_id: hub:${h.value.id}\n\nÇÖZÜM:\n${h.value.output}\n\n` +
+              'Uygula ve doğrula; sonra MUTLAKA cache_report çağır (entry_id aynen, worked=true/false).',
+          );
+        }
+        if (h.status === 'unreachable') {
+          return textResult('MISS — yerelde yok; Merkez erişilemedi (yerel çalışmaya devam). Kendin çöz; sırsızsa cache_contribute ile paylaş.');
+        }
+      }
+      return textResult('MISS — havuzda benzer çözüm yok. Kendin çöz; çözüm yeniden kullanılabilir ve sırsızsa cache_contribute ile paylaş.');
     }
     if (name === 'cache_report') {
-      const r = getCache().report(String(args.entry_id ?? ''), Boolean(args.worked), args.correction ? String(args.correction) : undefined);
+      const entryId = String(args.entry_id ?? '');
+      const worked = Boolean(args.worked);
+      const correction = args.correction ? String(args.correction) : undefined;
+      if (entryId.startsWith('hub:')) {
+        if (!hub) return textResult('hata: hub: girdisi ama Merkez ayarlı değil (caphlon hive hub <url>)', true);
+        const r = await hubReport(hub, Number(entryId.slice(4)), worked, correction, node);
+        if (r.status === 'hit') return textResult(`Merkez: ${r.value.action}`);
+        if (r.status === 'rejected') return textResult(r.detail, true);
+        if (r.status === 'miss') return textResult(`Merkez: kayıt bulunamadı (${entryId})`, true);
+        return textResult(`Merkez erişilemedi — rapor iletilemedi (${r.detail})`, true);
+      }
+      const r = getCache().report(entryId, worked, correction);
       return textResult(r.detail, !r.ok);
     }
     if (name === 'cache_contribute') {
-      const id = getCache().record(String(args.instruction ?? ''), String(args.output ?? ''), 'technical');
-      return textResult(`kaydedildi (teknik havuz): ${id}`);
+      const instruction = String(args.instruction ?? '');
+      const output = String(args.output ?? '');
+      const id = getCache().record(instruction, output, 'technical'); // yerel sır kapısı burada
+      let extra = '';
+      if (hub) {
+        const h = await hubContribute(hub, instruction, output, node);
+        extra =
+          h.status === 'hit'
+            ? ` · Merkez'e de gönderildi (hub:${h.value.id})`
+            : h.status === 'rejected'
+              ? ` · Merkez reddetti: ${h.detail}`
+              : ' · Merkez erişilemedi (yerel kaldı)';
+      }
+      return textResult(`kaydedildi (teknik havuz): ${id}${extra}`);
     }
-    // cache_remember
+    // cache_remember — KİŞİSEL: Merkez'e asla gitmez.
     const id = getCache().record(String(args.instruction ?? ''), String(args.output ?? ''), 'personal');
     return textResult(`kaydedildi (kişisel, paylaşılmaz): ${id}`);
   } catch (e) {
@@ -140,7 +194,7 @@ function rpcError(id: unknown, code: number, message: string): Json {
 }
 
 /** Tek mesajı işle; bildirimler (id'siz) için null döner. */
-export function handleMessage(msg: Json): Json | null {
+export async function handleMessage(msg: Json): Promise<Json | null> {
   if (!('id' in msg)) return null;
   const id = msg.id;
   const method = msg.method as string | undefined;
@@ -166,7 +220,7 @@ export function handleMessage(msg: Json): Json | null {
         return result(id, textResult(`hata: zorunlu argüman eksik: ${req}`, true));
       }
     }
-    return result(id, callTool(name!, toolArgs));
+    return result(id, await callTool(name!, toolArgs));
   }
   return rpcError(id, -32601, `bilinmeyen metod: ${method}`);
 }
@@ -187,13 +241,15 @@ function serve(): void {
       process.stdout.write(JSON.stringify(rpcError(null, -32600, 'istek bir JSON nesnesi olmalı')) + '\n');
       return;
     }
-    try {
-      const resp = handleMessage(msg as Json);
-      if (resp) process.stdout.write(JSON.stringify(resp) + '\n');
-    } catch (e) {
-      process.stderr.write(`caphlon-cache-mcp beklenmeyen hata: ${String(e)}\n`);
-      process.stdout.write(JSON.stringify(rpcError((msg as Json).id ?? null, -32603, 'internal error')) + '\n');
-    }
+    void (async () => {
+      try {
+        const resp = await handleMessage(msg as Json);
+        if (resp) process.stdout.write(JSON.stringify(resp) + '\n');
+      } catch (e) {
+        process.stderr.write(`caphlon-cache-mcp beklenmeyen hata: ${String(e)}\n`);
+        process.stdout.write(JSON.stringify(rpcError((msg as Json).id ?? null, -32603, 'internal error')) + '\n');
+      }
+    })();
   });
 }
 
