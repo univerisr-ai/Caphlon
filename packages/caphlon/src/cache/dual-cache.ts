@@ -310,6 +310,15 @@ export class DualCache {
           if (found.length) {
             return { ok: false, detail: `sır kapısı: düzeltmede gizli anahtar deseni var (${found.join(', ')}) — maskeleyip yeniden dene` };
           }
+          // Güvenlik kapısı düzeltme yolunda da geçerli: aksi halde record()'un
+          // reddettiği içerik report(correction) ile havuza sızardı (denetim bulgusu).
+          const harmful = blockingFindings(correction);
+          if (harmful.length) {
+            return {
+              ok: false,
+              detail: `güvenlik kapısı: düzeltme reddedildi (${harmful.map((h) => h.reason).join(', ')}) — zararlı/yıkıcı içerik havuza giremez`,
+            };
+          }
         }
         this.db(scope)
           .prepare('UPDATE solutions SET output = ?, version = version + 1, failed_count = failed_count + 1, updated_at = ? WHERE entry_id = ?')
@@ -336,7 +345,11 @@ export class DualCache {
           "SELECT entry_id, version, instruction, output, worked_count, failed_count, created_at, updated_at FROM solutions WHERE status = 'verified'",
         )
         .all() as PoolEntry[]
-    ).map((r) => ({ ...r }));
+    )
+      .map((r) => ({ ...r }))
+      // Son savunma hattı: eski sürümde/elle girmiş zararlı satır paylaşılan
+      // repoya ÇIKMAZ (importEntries'in simetrisi — denetim bulgusu).
+      .filter((e) => blockingFindings(e.instruction + '\n' + e.output).length === 0);
   }
 
   /**
@@ -350,6 +363,9 @@ export class DualCache {
     let updated = 0;
     let skippedSecret = 0;
     let skippedHarmful = 0;
+    // Tek transaction: 10k kayıtlık ilk içe aktarım saniyelerden milisaniyelere iner.
+    db.exec('BEGIN');
+    try {
     for (const e of entries) {
       if (scanSecrets(e.instruction + '\n' + e.output).length) {
         skippedSecret++;
@@ -360,8 +376,8 @@ export class DualCache {
         skippedHarmful++;
         continue;
       }
-      const cur = db.prepare('SELECT version FROM solutions WHERE entry_id = ?').get(e.entry_id) as
-        | { version: number }
+      const cur = db.prepare('SELECT version, updated_at FROM solutions WHERE entry_id = ?').get(e.entry_id) as
+        | { version: number; updated_at: number }
         | undefined;
       if (!cur) {
         db.prepare(
@@ -378,12 +394,22 @@ export class DualCache {
           e.updated_at ?? Date.now(),
         );
         added++;
-      } else if (e.version > cur.version) {
+      } else if (
+        // mergePools ile AYNI kural: yüksek versiyon, eşitse yeni updated_at
+        // (aksi halde eşzamanlı düzeltme sessizce kaybolurdu — denetim bulgusu).
+        e.version > cur.version ||
+        (e.version === cur.version && (e.updated_at ?? 0) > (cur.updated_at ?? 0))
+      ) {
         db.prepare(
           'UPDATE solutions SET version = ?, output = ?, worked_count = ?, failed_count = ?, updated_at = ? WHERE entry_id = ?',
         ).run(e.version, e.output, e.worked_count ?? 0, e.failed_count ?? 0, e.updated_at ?? Date.now(), e.entry_id);
         updated++;
       }
+    }
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
     }
     return { added, updated, skippedSecret, skippedHarmful };
   }

@@ -23,7 +23,25 @@ export interface SafetyFinding {
   blocking: boolean;
 }
 
-const RULES: { re: RegExp; reason: string; blocking: boolean }[] = [
+type Rule =
+  | { re: RegExp; reason: string; blocking: boolean }
+  | { custom: 'rm-recursive-force'; reason: string; blocking: boolean };
+
+/**
+ * `rm` çağrısında recursive VE force bayrakları AYRI AYRI verilmiş mi?
+ * (rm -rf · rm -r -f · rm --recursive --force · rm -fr — hepsi yakalanır)
+ */
+function hasRecursiveForceRm(text: string): boolean {
+  for (const m of text.matchAll(/\brm\b((?:\s+(?:-{1,2}[\w-]+))+)/gi)) {
+    const flags = m[1]!;
+    const recursive = /(^|\s)-{1,2}(recursive\b|[a-zA-Z]*[rR][a-zA-Z]*(\s|$))/.test(flags);
+    const force = /(^|\s)-{1,2}(force\b|[a-zA-Z]*f[a-zA-Z]*(\s|$))/.test(flags);
+    if (recursive && force) return true;
+  }
+  return false;
+}
+
+const RULES: Rule[] = [
   // --- core/security.py HARMFUL_PATTERNS aynası ---
   {
     re: /\b(how|tutorial|guide|nasıl)\b.*\b(hack|exploit|malware|ransomware|phish|keylogger)\b/i,
@@ -42,17 +60,33 @@ const RULES: { re: RegExp; reason: string; blocking: boolean }[] = [
   },
 
   // --- Yıkıcı komut ailesi: körlemesine uygulanırsa makineyi bozar ---
+  // rm: bayraklar AYRIK da olabilir (rm -r -f, rm --recursive --force) — tek
+  // regex yerine "rm sonrası bayrak dizisinde recursive VE force var mı" kuralı.
+  { custom: 'rm-recursive-force', reason: 'yıkıcı komut (rm -rf)', blocking: true },
+  { re: /:\(\)\s*\{\s*:\|:&\s*\}\s*;\s*:/, reason: 'fork bomb', blocking: true },
   {
-    re: /\brm\s+(-[a-zA-Z]*\s+)*-[a-zA-Z]*[rR][a-zA-Z]*f|\brm\s+-fr\b/,
-    reason: 'yıkıcı komut (rm -rf)',
+    // macOS ham aygıt (/dev/rdiskN), sd/nvme/hd/vd; dd of= ve > /dev/ yönlendirmesi
+    re: /\bmkfs(\.\w+)?\b|\bdd\s+[^|\n]*of=\/dev\/r?(sd|nvme|disk|hd|vd)|>\s*\/dev\/r?(sd|nvme|disk|hd|vd)\w*\b|\bdiskutil\s+(erase(Disk|Volume)|partitionDisk)\b/i,
+    reason: 'disk biçimlendirme/üzerine yazma',
     blocking: true,
   },
-  { re: /:\(\)\s*\{\s*:\|:&\s*\}\s*;\s*:/, reason: 'fork bomb', blocking: true },
-  { re: /\bmkfs(\.\w+)?\b|\bdd\s+[^|\n]*of=\/dev\/(sd|nvme|disk)/i, reason: 'disk biçimlendirme/üzerine yazma', blocking: true },
-  { re: /\bchmod\s+(-[a-zA-Z]+\s+)*777\s+\//, reason: 'kök dizinde 777 izni', blocking: true },
+  { re: /\bchmod\s+(-[a-zA-Z]+\s+)*0?777\s+\//, reason: 'kök dizinde 777 izni', blocking: true },
   {
-    re: /\bcurl\b[^|\n]*\|\s*(sudo\s+)?(ba|z|k)?sh\b|\bwget\b[^|\n]*\|\s*(sudo\s+)?(ba|z|k)?sh\b/i,
+    // boru: curl/wget → (sudo) sh|bash|zsh|ksh|dash|fish|python|perl|ruby|node
+    re: /\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+(-\S+\s+)*)?(ba|z|k|da)?sh\b|\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+(-\S+\s+)*)?(fish|python[23]?|perl|ruby|node)\b/i,
     reason: 'doğrulanmamış uzak script’i doğrudan kabuğa boru (curl|sh)',
+    blocking: true,
+  },
+  {
+    // komut ikamesi / process substitution: sh -c "$(curl ...)" · bash <(curl ...)
+    re: /(\$\(|<\()\s*(curl|wget)\b/i,
+    reason: 'uzak script komut-ikamesiyle çalıştırılıyor ($(curl ...) / <(curl ...))',
+    blocking: true,
+  },
+  {
+    // gizleme: base64 -d | sh, echo ... | base64 --decode | bash, eval $(...)
+    re: /\bbase64\b[^|\n]*(-d|--decode)[^|\n]*\|\s*(sudo\s+)?\w*sh\b|\beval\s*[("']*\s*\$\(/i,
+    reason: 'gizlenmiş komut çalıştırma (base64/eval)',
     blocking: true,
   },
   {
@@ -71,7 +105,8 @@ const RULES: { re: RegExp; reason: string; blocking: boolean }[] = [
 export function scanHarmful(text: string): SafetyFinding[] {
   const out: SafetyFinding[] = [];
   for (const r of RULES) {
-    if (r.re.test(text)) out.push({ reason: r.reason, blocking: r.blocking });
+    const hit = 'custom' in r ? hasRecursiveForceRm(text) : r.re.test(text);
+    if (hit) out.push({ reason: r.reason, blocking: r.blocking });
   }
   return out;
 }

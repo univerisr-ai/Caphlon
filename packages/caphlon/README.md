@@ -35,6 +35,8 @@ Tam ve güncel liste: `caphlon --help` (komut yüzeyi `src/index.ts`'te tanıml�
 | `tools` | Harici ajan CLI'larına (Claude Code vb.) Caphlon'u bağla |
 | `hive` | Kovan zekâsı: çok-örnekli konsensüs |
 | `hermes` / `flower` / `tokenless` | Deneysel katman (bkz. kök README "Durum" sütunu) |
+| `cache` | Token-tasarruf havuzu: `stats` + `sync push/pull` (Git-Merkez) |
+| `setup` | Platformu kur/onar (npm kurulumundan sonraki tek adım) |
 | `status` / `doctor` | Durum özeti / gerçek probe'larla tanılama (`doctor --fix`) |
 
 ## Aliases

@@ -14,6 +14,7 @@ import { createInterface } from 'node:readline';
 import { DualCache } from '../cache/dual-cache.js';
 import { hubBorrow, hubContribute, hubReport } from '../cache/hub-client.js';
 import { loadConfig } from '../config/store.js';
+import { blockingFindings, scanHarmful } from '../cache/safety.js';
 import { hostname } from 'node:os';
 
 const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
@@ -121,9 +122,23 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<Mc
       const instruction = String(args.instruction ?? '');
       const hit = getCache().borrow(instruction);
       if (hit) {
+        // Fail-closed: bloklayıcı bulgu varsa ÇÖZÜM HİÇ BASILMAZ (eski/elle
+        // girmiş içerik ajana talimat gibi sunulmasın — denetim bulgusu).
+        const blocking = (hit.warnings ?? []).filter((w) => w.blocking);
+        if (blocking.length) {
+          return textResult(
+            `GÜVENLİK REDDİ — havuzdaki kayıt zararlı/yıkıcı içerik taşıyor (${blocking
+              .map((w) => w.reason)
+              .join(', ')}). Çözüm gösterilmedi; kendin çöz.`,
+            true,
+          );
+        }
+        const warn = (hit.warnings ?? []).length
+          ? `\n⚠️ UYARI (körlemesine uygulama): ${hit.warnings!.map((w) => w.reason).join(', ')}\n`
+          : '';
         return textResult(
           `HIT (yerel, benzerlik ${(hit.similarity * 100).toFixed(0)}%, güven +${hit.workedCount}/-${hit.failedCount})\n` +
-            `entry_id: ${hit.entryId}\n\nÇÖZÜM:\n${hit.output}\n\n` +
+            `entry_id: ${hit.entryId}\n${warn}\nÇÖZÜM:\n${hit.output}\n\n` +
             'Uygula ve doğrula; sonra MUTLAKA cache_report çağır (worked=true, ya da worked=false + correction).',
         );
       }
@@ -132,9 +147,23 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<Mc
       if (hub) {
         const h = await hubBorrow(hub, instruction, token);
         if (h.status === 'hit') {
+          // Merkez GÜVENİLMEZ girdidir: yerel havuzla AYNI kapıdan geçir.
+          const findings = scanHarmful(h.value.instruction + '\n' + h.value.output);
+          const blocking = findings.filter((f) => f.blocking);
+          if (blocking.length) {
+            return textResult(
+              `GÜVENLİK REDDİ — Merkez'den gelen kayıt zararlı/yıkıcı içerik taşıyor (${blocking
+                .map((f) => f.reason)
+                .join(', ')}). Çözüm gösterilmedi; kendin çöz.`,
+              true,
+            );
+          }
+          const warn = findings.length
+            ? `\n⚠️ UYARI (körlemesine uygulama): ${findings.map((f) => f.reason).join(', ')}\n`
+            : '';
           return textResult(
             `HIT (Merkez/Kovan, benzerlik ${(h.value.similarity * 100).toFixed(0)}%, skor ${h.value.score.toFixed(1)})\n` +
-              `entry_id: hub:${h.value.id}\n\nÇÖZÜM:\n${h.value.output}\n\n` +
+              `entry_id: hub:${h.value.id}\n${warn}\nÇÖZÜM:\n${h.value.output}\n\n` +
               'Uygula ve doğrula; sonra MUTLAKA cache_report çağır (entry_id aynen, worked=true/false).',
           );
         }
@@ -150,6 +179,15 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<Mc
       const correction = args.correction ? String(args.correction) : undefined;
       if (entryId.startsWith('hub:')) {
         if (!hub) return textResult('hata: hub: girdisi ama Merkez ayarlı değil (caphlon hive hub <url>)', true);
+        if (correction) {
+          const harmful = blockingFindings(correction);
+          if (harmful.length) {
+            return textResult(
+              `güvenlik kapısı: düzeltme Merkez'e gönderilmedi (${harmful.map((h) => h.reason).join(', ')})`,
+              true,
+            );
+          }
+        }
         const r = await hubReport(hub, Number(entryId.slice(4)), worked, correction, node, token);
         if (r.status === 'hit') return textResult(`Merkez: ${r.value.action}`);
         if (r.status === 'rejected') return textResult(r.detail, true);

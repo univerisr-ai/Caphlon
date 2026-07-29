@@ -73,8 +73,15 @@ function ensureSyncMirror(remote: string): string {
     if (git(['init'], dir).status !== 0) throw new Error('git init başarısız');
     git(['remote', 'add', 'origin', remote], dir);
   }
-  git(['fetch', 'origin'], dir);
+  const fetched = git(['fetch', 'origin'], dir);
   let base: string | null = null;
+  // Boş repo'da fetch başarısız olabilir (henüz ref yok) — normaldir. Ama
+  // erişim/ad hatasında sessizce "başarılı" dönmek veri kaybı gibi görünür.
+  if (fetched.status !== 0 && /could not read|Authentication|Permission denied|not found|Could not resolve host|repository .* does not exist/i.test(fetched.stderr || '')) {
+    throw new Error(
+      `git fetch başarısız (depo adı/erişim?):\n${(fetched.stderr || '').trim()}\n  İpucu: gh auth login · repo adını kontrol et`,
+    );
+  }
   for (const ref of [`origin/${SYNC_BRANCH}`, 'origin/master']) {
     if (git(['rev-parse', '--verify', ref], dir).status === 0) {
       base = ref;

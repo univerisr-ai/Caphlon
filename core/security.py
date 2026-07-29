@@ -35,6 +35,49 @@ def scan_secrets(text: str) -> list[str]:
     return [name for name, pat in SECRET_PATTERNS if pat.search(text)]
 
 
+# ---------------------------------------------------------------------------
+# Güvenlik kapısı — kötü amaçlı içerik + yıkıcı komut (TS safety.ts aynası).
+# Merkez'e gelen katkı/düzeltme sunucuda da taranır: istemci atlarsa/eskiyse
+# havuz yine korunur (çift katman, egos deseni).
+# ---------------------------------------------------------------------------
+
+HARMFUL_RULES: list[tuple[str, re.Pattern]] = [
+    ("kötü amaçlı içerik", re.compile(
+        r"\b(how|tutorial|guide|nas[ıi]l)\b.*\b(hack|exploit|malware|ransomware|phish|keylogger)\b", re.I)),
+    ("zararlı içerik", re.compile(
+        r"\b(make|create|build|recipe|yap|üret)\b.*\b(bomb|weapon|poison|bomba|silah|zehir)\b", re.I)),
+    ("yıkıcı komut (fork bomb)", re.compile(r":\(\)\s*\{\s*:\|:&\s*\}\s*;\s*:")),
+    ("disk biçimlendirme/üzerine yazma", re.compile(
+        r"\bmkfs(\.\w+)?\b|\bdd\s+[^|\n]*of=/dev/r?(sd|nvme|disk|hd|vd)|>\s*/dev/r?(sd|nvme|disk|hd|vd)\w*\b"
+        r"|\bdiskutil\s+(erase(Disk|Volume)|partitionDisk)\b", re.I)),
+    ("kök dizinde 777 izni", re.compile(r"\bchmod\s+(-[a-zA-Z]+\s+)*0?777\s+/")),
+    ("curl|sh (doğrulanmamış uzak script)", re.compile(
+        r"\b(curl|wget)\b[^|\n]*\|\s*(sudo\s+(-\S+\s+)*)?((ba|z|k|da)?sh|fish|python[23]?|perl|ruby|node)\b"
+        r"|(\$\(|<\()\s*(curl|wget)\b", re.I)),
+    ("gizlenmiş komut çalıştırma", re.compile(
+        r"\bbase64\b[^|\n]*(-d|--decode)[^|\n]*\|\s*(sudo\s+)?\w*sh\b|\beval\s*[(\"']*\s*\$\(", re.I)),
+]
+
+_RM_FLAGS = re.compile(r"\brm\b((?:\s+(?:-{1,2}[\w-]+))+)", re.I)
+
+
+def scan_harmful(text: str) -> list[str]:
+    """Zararlı/yıkıcı içerik bulgularının adlarını döndürür (boş = temiz).
+
+    `rm` için bayraklar AYRIK verilmiş olabilir (rm -r -f, --recursive --force):
+    tek regex yerine bayrak dizisinde recursive VE force aranır.
+    """
+    found = [name for name, pat in HARMFUL_RULES if pat.search(text)]
+    for m in _RM_FLAGS.finditer(text):
+        flags = m.group(1)
+        recursive = re.search(r"(^|\s)-{1,2}(recursive\b|[a-zA-Z]*[rR][a-zA-Z]*(\s|$))", flags)
+        force = re.search(r"(^|\s)-{1,2}(force\b|[a-zA-Z]*f[a-zA-Z]*(\s|$))", flags)
+        if recursive and force:
+            found.append("yıkıcı komut (rm -rf)")
+            break
+    return found
+
+
 @dataclass
 class ValidationResult:
     passed: bool
