@@ -26,6 +26,7 @@ Tam ve güncel liste: `caphlon --help` (komut yüzeyi `src/index.ts`'te tanıml�
 | `connect` / `disconnect` / `model` | LLM sağlayıcısı bağla, anahtar şifreli saklanır, tüm araçlara dağıtılır |
 | `ui` (`tui`) | Gerçek OpenCode TUI'sini başlatır (bağlı modelle) |
 | `code` | Aider — git-farkındalıklı çift-programlama |
+| `forge` | **Kanıt-kapılı kod**: N aday izole worktree'de, projenin gerçek testleri eler, bağımsız judge seçer |
 | `max` | Kör doğrulama: adayları aktif model üretir, kazananı ayrı judge seçer |
 | `skill` | Skill katmanı: add/list/evolve + `sync push/pull` (Living Marketplace) |
 | `init` / `dev` / `run` | Proje başlat, ajan+dashboard, Qualixar ile görev |
