@@ -28,6 +28,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { caphlonHome } from '../config/store.js';
+import { blockingFindings, scanHarmful, type SafetyFinding } from './safety.js';
 
 // node:sqlite: Node 22.13+/23.4+ yerleşik. Eski Node'da modül yok — katman
 // kapalı kalır, CLI'nın geri kalanı etkilenmez.
@@ -115,6 +116,8 @@ export interface BorrowHit {
   similarity: number;
   workedCount: number;
   failedCount: number;
+  /** Ödünç anında yapılan güvenlik taraması — boş değilse ajan körlemesine uygulamamalı. */
+  warnings?: SafetyFinding[];
 }
 
 /** Git-Merkez havuz satırı (pool.jsonl şeması) — yalnız TEKNİK havuz senkronlanır. */
@@ -218,6 +221,14 @@ export class DualCache {
             'Sırları maskeleyip yeniden dene — kişisel kayıt (scope=personal) taranmaz.',
         );
       }
+      // Güvenlik kapısı: kötü amaçlı içerik / yıkıcı komut havuza GİRMEZ.
+      const harmful = blockingFindings(instruction + '\n' + output);
+      if (harmful.length) {
+        throw new Error(
+          `güvenlik kapısı: paylaşılabilir kayıt reddedildi (${harmful.map((h) => h.reason).join(', ')}). ` +
+            'Zararlı/yıkıcı içerik havuza giremez.',
+        );
+      }
     }
     const now = Date.now();
     const id = randomUUID();
@@ -259,7 +270,10 @@ export class DualCache {
       if (best) {
         this.db(scope).prepare('UPDATE solutions SET hits = hits + 1 WHERE entry_id = ?').run(best.entryId);
         this.bump(scope, 'borrows', 1);
-        return { ...best, scope };
+        // Ödünç anında ikinci savunma: havuza eski sürümde girmiş ya da elle
+        // eklenmiş riskli içerik varsa ajan uyarılır (fail-loud, sessiz uygulama yok).
+        const warnings = scanHarmful(best.instruction + '\n' + best.output);
+        return { ...best, scope, ...(warnings.length ? { warnings } : {}) };
       }
     }
     return null;
@@ -330,14 +344,20 @@ export class DualCache {
    * YÜKSEK versiyonda günceller (düzeltmeler yayılır, eskisi ezilmez). İçe
    * aktarımda sır taraması ikinci savunma hattıdır — bulgu varsa satır atlanır.
    */
-  importEntries(entries: PoolEntry[]): { added: number; updated: number; skippedSecret: number } {
+  importEntries(entries: PoolEntry[]): { added: number; updated: number; skippedSecret: number; skippedHarmful: number } {
     const db = this.db('technical');
     let added = 0;
     let updated = 0;
     let skippedSecret = 0;
+    let skippedHarmful = 0;
     for (const e of entries) {
       if (scanSecrets(e.instruction + '\n' + e.output).length) {
         skippedSecret++;
+        continue;
+      }
+      // Git-Merkez'den gelen havuz güvenilmez girdidir: zararlı satır yerele girmez.
+      if (blockingFindings(e.instruction + '\n' + e.output).length) {
+        skippedHarmful++;
         continue;
       }
       const cur = db.prepare('SELECT version FROM solutions WHERE entry_id = ?').get(e.entry_id) as
@@ -365,7 +385,7 @@ export class DualCache {
         updated++;
       }
     }
-    return { added, updated, skippedSecret };
+    return { added, updated, skippedSecret, skippedHarmful };
   }
 
   stats(): CacheStats {
