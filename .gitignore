@@ -45,3 +45,5 @@ core/flower-venv/
 
 # Runtime-üretilen profil config (şablondan; makineye özgü mutlak yollar içerir)
 packages/caphlon/opencode-profile/opencode.json
+.DS_Store
+**/.DS_Store
