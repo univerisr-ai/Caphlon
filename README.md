@@ -45,6 +45,9 @@ cd packages/caphlon && npm link    # optional: `caphlon` from anywhere
 
 ## Staying current
 
+> Note: the safety gate and this update flow are on `master`; they ship with the
+> next npm release (published `0.3.0` predates them).
+
 `caphlon` checks for a new release at most once a day and **asks** before doing
 anything — there is no silent auto-update. Answer `E` and it runs
 `npm i -g caphlon@latest`; answer anything else and that version won't be
@@ -134,6 +137,8 @@ caphlon hermes       # Hermes Agent (Experimental — see Components table)
 caphlon flower       # Federated learning (Experimental)
 caphlon tokenless    # Token compression (Experimental)
 caphlon disconnect   # Remove a provider's key
+caphlon cache        # Token-saving pool: stats + sync push/pull (Git-Merkez)
+caphlon setup        # Install/repair the platform (real tools)
 caphlon status       # System status
 caphlon doctor       # Diagnostics (--fix: repairs the setup)
 caphlon init         # Initialize a project

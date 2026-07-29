@@ -82,6 +82,8 @@ async function fetchLatest(): Promise<string | null> {
 export async function checkForUpdate(current: string): Promise<string | null> {
   if (process.env.CAPHLON_NO_UPDATE_CHECK === '1') return null;
   const st = loadState();
+  // Bozuk/ileri tarihli damga kontrolü süresiz kapatmasın — kendini onarır.
+  if (st.lastCheck > Date.now()) st.lastCheck = 0;
   if (Date.now() - st.lastCheck < CHECK_INTERVAL_MS) return null;
 
   const latest = await fetchLatest();

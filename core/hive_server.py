@@ -35,7 +35,7 @@ from typing import Callable, Optional
 from urllib.parse import urlparse, parse_qs
 
 from hive_engine import HiveEngine, NodeAnswer
-from security import ReputationSystem, Honeypot, scan_secrets
+from security import ReputationSystem, Honeypot, scan_secrets, scan_harmful
 from hive_cache import SharedSolutionCache
 from adapter_registry import AdapterRegistry
 from fed_aggregate import federated_round
@@ -296,6 +296,9 @@ def make_handler(state: HiveState):
                 findings = scan_secrets(instr + "\n" + out)
                 if findings:
                     return self._send(422, {"error": "sır kapısı", "findings": findings})
+                harmful = scan_harmful(instr + "\n" + out)
+                if harmful:
+                    return self._send(422, {"error": "güvenlik kapısı", "findings": harmful})
                 node = str(data.get("node_id", "")).strip()
                 weight = state.engine.rep.get_score(node) if node else 1.0
                 sid = state.engine.cache.record(instr, out, weight=max(0.1, weight))
@@ -310,6 +313,9 @@ def make_handler(state: HiveState):
                     findings = scan_secrets(correction)
                     if findings:
                         return self._send(422, {"error": "sır kapısı", "findings": findings})
+                    harmful = scan_harmful(correction)
+                    if harmful:
+                        return self._send(422, {"error": "güvenlik kapısı", "findings": harmful})
                 node = str(data.get("node_id", "")).strip()
                 weight = state.engine.rep.get_score(node) if node else 1.0
                 res = state.engine.cache.report(sid, worked, correction, weight=max(0.1, weight))
