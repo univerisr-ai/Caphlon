@@ -17,8 +17,8 @@
     "README.md"
   ],
   "bin": {
-    "caphlon": "./bin/caphlon.js",
-    "caph": "./bin/caphlon.js"
+    "caphlon": "bin/caphlon.js",
+    "caph": "bin/caphlon.js"
   },
   "scripts": {
     "build": "tsc",
