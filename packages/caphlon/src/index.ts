@@ -9,6 +9,7 @@ import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
 import { setupCommand } from './commands/setup.js';
 import { cacheCommand } from './commands/cache.js';
+import { vaultCommand } from './commands/vault.js';
 import { devCommand } from './commands/dev.js';
 import { runTask } from './qos-bridge.js';
 import { statusCommand } from './commands/status.js';
@@ -382,6 +383,15 @@ Akış:
 `)
     .action(async (task: string, options: { candidates?: string }) => {
       await forgeCommand(task, options);
+    });
+
+  program
+    .command('vault')
+    .description('Bilgi kasası (Obsidian’sız): ucuz indeks + gerektiğinde açılan notlar — token verimliliği')
+    .argument('[sub]', 'index | stats | add')
+    .argument('[args...]', 'alt-komut argümanları')
+    .action(async (sub, args) => {
+      await vaultCommand(sub, args ?? []);
     });
 
   program

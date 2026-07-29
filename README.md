@@ -126,6 +126,7 @@ caphlon run "..."    # Run a task
 caphlon design       # Design pipeline
 caphlon compose      # Compose workflow (8 stages; runs/resume: crash-safe continuation)
 caphlon skill        # Skill store: list/add/search/show/learn/evolve/sync
+caphlon vault        # Knowledge vault: cheap index + on-demand notes (token-efficient)
 caphlon forge "..."  # Evidence-gated code: N candidates, real tests eliminate, judge picks
 caphlon max          # Blind verification: generate N candidates, a SEPARATE judge model picks the winner
 caphlon serve        # LiteLLM proxy — expose the connected model as an OpenAI-compatible endpoint
@@ -141,6 +142,27 @@ caphlon status       # System status
 caphlon doctor       # Diagnostics (--fix: repairs the setup)
 caphlon init         # Initialize a project
 ```
+
+## 🗂 Vault — Obsidian-style knowledge, without Obsidian
+
+People install Obsidian to keep AI context cheap: small linked notes instead of
+one giant document, so the agent reads a map first and opens only what it needs.
+Caphlon ships that system natively — plain markdown, `[[wiki-links]]`, no app to
+install (open the folder in Obsidian anyway if you like, it's the same format).
+
+```bash
+caphlon vault index    # the one-line-per-note map the agent sees
+caphlon vault stats    # measured: index tokens vs whole-vault tokens
+```
+
+In chat it's automatic: the agent calls `vault_index` (cheap map) → picks →
+`vault_read` (only that note; `follow_links` to pull its neighbours) → and
+writes durable decisions back with `vault_write`. Project notes live in
+`.caphlon/vault/`, machine-wide ones in `~/.caphlon/vault/`.
+
+Measured on a 3-note vault: index **~42 tokens** vs whole vault **~115 tokens**
+(**63% cheaper**) — and the gap widens fast, because the index grows by one line
+per note while the notes themselves grow without limit.
 
 ## ⚒️ Forge — evidence-gated code (the part no other CLI does)
 
