@@ -21,12 +21,49 @@ test('searchMarkdown: ilgili paragraf skorla döner, alakasız gelmez', () => {
   assert.deepEqual(searchMarkdown(md, 'tamamen alakasız uzay mekiği'), []);
 });
 
-test('initialize + tools/list: iki araç, hatırlama talimatlı', () => {
+test('initialize + tools/list: kasa + hafıza araçları, "önce indeks" talimatlı', () => {
   const init = handleMessage({ jsonrpc: '2.0', id: 1, method: 'initialize', params: {} }) as any;
   assert.equal(init.result.serverInfo.name, 'caphlon-memory');
-  assert.match(init.result.instructions, /memory_search/);
+  // Token verimliliğinin sözleşmesi talimatta açıkça yazmalı
+  assert.match(init.result.instructions, /START with vault_index/);
+  assert.match(init.result.instructions, /Never dump the whole vault/);
   const tools = (handleMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list' }) as any).result.tools;
-  assert.deepEqual(tools.map((t: any) => t.name), ['memory_search', 'memory_write']);
+  assert.deepEqual(
+    tools.map((t: any) => t.name),
+    ['vault_index', 'vault_read', 'vault_write', 'vault_search', 'memory_search', 'memory_write'],
+  );
+});
+
+test('kasa uçtan uca: yaz → indeks (ucuz) → oku → bağlantı takibi', () => {
+  const proj = mkdtempSync(join(tmpdir(), 'caphlon-vault-mcp-'));
+  const prev = process.cwd();
+  process.chdir(proj);
+  try {
+    assert.match(call('vault_index', {}).result.content[0].text, /Kasa boş/);
+
+    call('vault_write', {
+      title: 'Node surumu',
+      hook: 'neden 22 sart',
+      body: 'Qualixar better-sqlite3 icin Node 22 ister. Bkz [[derleme-tuzaklari]].',
+    });
+    call('vault_write', { title: 'Derleme tuzaklari', hook: 'ABI hatalari', body: 'ABI uyusmazliginda yeniden derle.' });
+
+    const idx = call('vault_index', {}).result.content[0].text;
+    assert.match(idx, /\[\[node-surumu\]\]/);
+    assert.match(idx, /token/); // ölçüm satırı
+    // İndeks, notların tamamından kısa olmalı (asıl iddia)
+    const full = call('vault_read', { slug: 'node-surumu', follow_links: true }).result.content[0].text;
+    assert.ok(idx.length < full.length * 2);
+    assert.match(full, /Derleme tuzaklari/); // bağlantı takip edildi
+
+    const one = call('vault_read', { slug: 'node-surumu' }).result.content[0].text;
+    assert.doesNotMatch(one, /Derleme tuzaklari/); // takip kapalıyken sadece istenen not
+
+    assert.match(call('vault_search', { query: 'node surumu' }).result.content[0].text, /node-surumu/);
+    assert.equal(call('vault_read', { slug: 'yok-boyle' }).result.isError, true);
+  } finally {
+    process.chdir(prev);
+  }
 });
 
 test('memory_write → memory_search yuvarlak turu (geçici proje dizininde)', () => {

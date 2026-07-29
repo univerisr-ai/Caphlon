@@ -19,6 +19,10 @@ import { existsSync, readFileSync, appendFileSync, writeFileSync } from 'node:fs
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { projectRoot } from '../external.js';
+import {
+  loadAll, searchNotes, renderIndex, expand, writeNote, writeIndexFile,
+  savings, slugify, vaultDirs, short, estTokens,
+} from '../vault/vault.js';
 
 const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
@@ -30,13 +34,61 @@ try {
 }
 
 const INSTRUCTIONS =
-  'Persistent project memory (MiMo MEMORY.md + FTS index). Call memory_search ' +
-  'before asking the user to repeat context ("what did we decide about X?", ' +
-  '"how is this project set up?"). Call memory_write when a durable decision, ' +
-  'convention or gotcha emerges that future sessions must know — not for ' +
-  'transient chatter.';
+  'Persistent knowledge, token-efficiently. START with vault_index — it is a ' +
+  'ONE-LINE-PER-NOTE map of everything known about this project (cheap). Then ' +
+  'open ONLY the notes you need with vault_read. Never dump the whole vault ' +
+  'into context; that is what the index exists to avoid. Use vault_write when a ' +
+  'durable fact emerges (decision, convention, gotcha) — link related notes with ' +
+  '[[slug]]. memory_search/memory_write remain for the flat MEMORY.md file.';
 
 const TOOLS = [
+  {
+    name: 'vault_index',
+    description:
+      'START HERE for anything about this project you might already know. Returns a one-line-per-note map of the whole knowledge vault (cheap — a fraction of reading the notes). ' +
+      'Pick the relevant slugs from it, then call vault_read. Do NOT guess or ask the user to repeat context before checking this.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'vault_read',
+    description:
+      'Read ONE note from the vault by its slug (from vault_index). Set follow_links=true to also pull the notes it links to ([[slug]]) — use sparingly, it costs more tokens.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        slug: { type: 'string', description: 'Note slug as shown in vault_index' },
+        follow_links: { type: 'boolean', description: 'Also include directly linked notes (depth 1)' },
+      },
+      required: ['slug'],
+    },
+  },
+  {
+    name: 'vault_write',
+    description:
+      'Save a DURABLE fact as a vault note: a decision, convention, constraint or gotcha future sessions must know. ' +
+      'Give a short title, a one-line hook (why would someone open this?), and a body. Link related notes inside the body with [[slug]]. ' +
+      'Not for transient state, not for secrets.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        hook: { type: 'string', description: 'One line: why open this note?' },
+        body: { type: 'string', description: 'The knowledge itself; link others with [[slug]]' },
+        tags: { type: 'array', items: { type: 'string' } },
+        global: { type: 'boolean', description: 'Save to the machine-wide vault instead of this project' },
+      },
+      required: ['title', 'hook', 'body'],
+    },
+  },
+  {
+    name: 'vault_search',
+    description: 'Find notes by keywords when the index is long. Returns matching notes with their hooks — then vault_read the one you want.',
+    inputSchema: {
+      type: 'object',
+      properties: { query: { type: 'string' } },
+      required: ['query'],
+    },
+  },
   {
     name: 'memory_search',
     description:
@@ -115,6 +167,56 @@ function searchFts(query: string, limit = 5): string[] {
 }
 
 function callTool(name: string, args: Record<string, unknown>): McpResult {
+  // --- Kasa (token-verimli katman) ---
+  if (name === 'vault_index') {
+    const notes = loadAll();
+    if (!notes.length) {
+      return textResult(
+        'Kasa boş — bu projede henüz kayıtlı bilgi yok. Kalıcı bir karar/kural/tuzak ' +
+          'ortaya çıkarsa vault_write ile yaz (gelecek oturumlar sıfırdan başlamasın).',
+      );
+    }
+    const s = savings(notes);
+    return textResult(
+      `${renderIndex(notes)}\n\n(${notes.length} not · indeks ~${s.indexTokens} token; ` +
+        `tamamını okumak ~${s.fullTokens} token olurdu → yalnız gerekeni aç)`,
+    );
+  }
+  if (name === 'vault_read') {
+    const notes = loadAll();
+    const picked = expand(notes, String(args.slug ?? ''), Boolean(args.follow_links));
+    if (!picked.length) {
+      return textResult(`Not bulunamadı: ${String(args.slug ?? '')} — güncel liste için vault_index çağır.`, true);
+    }
+    return textResult(
+      picked.map((n) => `## ${n.title} [[${n.slug}]]\n${n.hook}\n\n${n.body}`).join('\n\n---\n\n'),
+    );
+  }
+  if (name === 'vault_search') {
+    const notes = loadAll();
+    const hits = searchNotes(notes, String(args.query ?? ''));
+    if (!hits.length) return textResult('Eşleşen not yok. vault_index ile tüm haritaya bakabilirsin.');
+    return textResult(
+      hits.map((n) => `- [[${n.slug}]] ${n.title} — ${n.hook}`).join('\n') +
+        '\n\nİlgili olanı vault_read ile aç.',
+    );
+  }
+  if (name === 'vault_write') {
+    const title = String(args.title ?? '').trim();
+    const hook = String(args.hook ?? '').trim();
+    const body = String(args.body ?? '').trim();
+    if (!title || !hook || !body) return textResult('hata: title, hook ve body zorunlu', true);
+    const dirs = vaultDirs();
+    const dir = args.global ? dirs.global : dirs.project;
+    const slug = slugify(title);
+    const path = writeNote(dir, {
+      slug, title, hook, body,
+      tags: Array.isArray(args.tags) ? args.tags.map(String) : [],
+    });
+    writeIndexFile(dir, loadAll());
+    return textResult(`kasaya yazıldı: ${short(path)} (slug: ${slug}) — indeks tazelendi`);
+  }
+
   if (name === 'memory_search') {
     const q = String(args.query ?? '');
     const out: string[] = [];
@@ -178,7 +280,8 @@ export function handleMessage(msg: Json): Json | null {
     const tool = TOOLS.find((t) => t.name === name);
     if (!tool) return rpcError(id, -32602, `bilinmeyen araç: ${name}`);
     const a = (params.arguments ?? {}) as Record<string, unknown>;
-    for (const req of (tool.inputSchema as any).required as string[]) {
+    // vault_index gibi argümansız araçlarda `required` yoktur — boş kabul et.
+    for (const req of ((tool.inputSchema as any).required ?? []) as string[]) {
       if (!a[req]) return result(id, textResult(`hata: zorunlu argüman eksik: ${req}`, true));
     }
     return result(id, callTool(name!, a));
