@@ -164,6 +164,11 @@ Measured on a 3-note vault: index **~42 tokens** vs whole vault **~115 tokens**
 (**63% cheaper**) — and the gap widens fast, because the index grows by one line
 per note while the notes themselves grow without limit.
 
+> **Works alongside your OpenCode setup.** Caphlon adds its profile to
+> OpenCode's config chain instead of replacing it — measured: an
+> `oh-my-opencode` install (its MCP servers, agents and plugin) loads together
+> with Caphlon's tools and instructions in one merged session.
+
 ## ⚒️ Forge — evidence-gated code (the part no other CLI does)
 
 Every coding CLI writes code and hands it to you; quality control is either the
