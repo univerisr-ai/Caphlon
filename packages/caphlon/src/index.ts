@@ -27,6 +27,7 @@ import { skillCommand } from './commands/skill.js';
 import { serveCommand } from './commands/serve.js';
 import { toolsCommand } from './commands/tools.js';
 import { maxCommand } from './commands/max.js';
+import { maybePromptUpdate } from './update.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -52,8 +53,9 @@ export async function run(): Promise<void> {
     .version(VERSION, '-v, --version', 'Show version')
     .helpOption('-h, --help', 'Show help');
 
-  // Bare `caphlon` (no subcommand) → connect a model if needed, then chat.
+  // Bare `caphlon` (no subcommand) → güncelleme sor (varsa), sonra sohbet.
   program.action(async () => {
+    await maybePromptUpdate(VERSION, import.meta.dirname);
     await startCommand();
   });
 

@@ -43,6 +43,15 @@ cd packages/caphlon && npm link    # optional: `caphlon` from anywhere
 ```
 </details>
 
+## Staying current
+
+`caphlon` checks for a new release at most once a day and **asks** before doing
+anything — there is no silent auto-update. Answer `E` and it runs
+`npm i -g caphlon@latest`; answer anything else and that version won't be
+offered again. Disable entirely with `CAPHLON_NO_UPDATE_CHECK=1`. Running from
+a source checkout? It tells you to `git pull` instead of touching your global
+install.
+
 ## Platform support (measured, not assumed)
 
 | Platform | Status |
@@ -138,7 +147,10 @@ caphlon init         # Initialize a project
 > regenerating it (~80-90% tokens saved per hit, measured model). Every borrow
 > closes with `cache_report` (worked / failed + correction), so broken
 > knowledge can't poison the pool. Personal notes never leave the machine;
-> shared entries pass a secret-scan gate. Share across machines/teammates with
+> shared entries pass **two gates**: a secret scan (no keys/tokens) and a safety
+> scan (no malicious content, no destructive commands like `rm -rf` / `curl|sh`;
+> risky-but-legit ones surface as warnings instead of silent application).
+> Share across machines/teammates with
 > **zero servers**: `caphlon cache sync push <owner/repo>` mirrors the technical
 > pool to a git repo (JSONL; corrections propagate by version) and `pull` merges
 > it back — the proven skill-sync pattern. Alternatively point at a live Hive
