@@ -120,12 +120,37 @@ elif [ -n "$AIDER_SRC" ]; then
   fi
 fi
 
+# --- 3.4 OpenCode TUI (bundled kopya → bun install) ---------------------------
+# caphlon ui, kaynak kopyayı Bun'la koşturur ve node_modules ŞARTTIR
+# (resolveLauncher kontrol eder). Taze kurulumda hiçbiri yoktu — Linux e2e bulgusu.
+if [ -d core/opencode-main ]; then
+  if ! command -v bun >/dev/null 2>&1 && [ ! -x "$HOME/.bun/bin/bun" ]; then
+    say "Bun yok — npm üzerinden kuruluyor (OpenCode TUI için)"
+    npm install -g bun --no-audit --no-fund >/dev/null 2>&1 || warn "bun kurulamadı — caphlon ui için: npm i -g bun"
+  fi
+  BUN_BIN="$(command -v bun || echo "$HOME/.bun/bin/bun")"
+  if [ -x "$BUN_BIN" ] && [ ! -d core/opencode-main/node_modules ]; then
+    say "OpenCode TUI bağımlılıkları — bun install"
+    if ( cd core/opencode-main && "$BUN_BIN" install --silent ); then
+      ok "OpenCode TUI hazır (caphlon ui)"
+    else
+      warn "OpenCode bağımlılıkları kurulamadı — elle: cd core/opencode-main && bun install"
+    fi
+  elif [ -d core/opencode-main/node_modules ]; then
+    ok "OpenCode TUI bağımlılıkları zaten kurulu"
+  fi
+fi
+
 # --- 3.5 Open Design daemon (bundled kopya → build) ---------------------------
 # caphlon design + TUI'deki opendesign MCP araçları dist/cli.js ister; taze
 # indirmede derli gelmez. pnpm yoksa uyarıp geçer (Koşullu katman).
 if [ -f open-design-main/apps/daemon/dist/cli.js ]; then
   ok "Open Design daemon zaten derli"
 elif [ -f open-design-main/apps/daemon/bin/od.mjs ]; then
+  if ! command -v pnpm >/dev/null 2>&1 && command -v corepack >/dev/null 2>&1; then
+    say "pnpm yok — corepack ile etkinleştiriliyor (Node ile gelir)"
+    corepack enable >/dev/null 2>&1 && corepack prepare pnpm@latest --activate >/dev/null 2>&1 || true
+  fi
   if command -v pnpm >/dev/null 2>&1; then
     say "Open Design daemon — pnpm install + build"
     if ( cd open-design-main && pnpm install --silent && pnpm --filter @open-design/daemon build ); then

@@ -43,6 +43,14 @@ cd packages/caphlon && npm link    # optional: `caphlon` from anywhere
 ```
 </details>
 
+## Platform support (measured, not assumed)
+
+| Platform | Status |
+|---|---|
+| macOS (Apple Silicon) | ✅ Developed here; full fresh-install e2e green (`doctor` 21/21) |
+| Linux (Ubuntu 24.04) | ✅ Clean-container fresh-install e2e green (`doctor` 21/21) |
+| Windows | ❌ Untested — use WSL2 (Ubuntu) and follow the Linux path |
+
 > **No subcommands to memorize:** just run `caphlon` and talk. Inside the chat,
 > a design request ("build me a Reddit-like landing page") auto-engages Open
 > Design, and heavy multi-file code changes auto-engage the real Aider (the
