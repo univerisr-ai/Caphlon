@@ -8,6 +8,7 @@
 import { Command } from 'commander';
 import { initCommand } from './commands/init.js';
 import { setupCommand } from './commands/setup.js';
+import { cacheCommand } from './commands/cache.js';
 import { devCommand } from './commands/dev.js';
 import { runTask } from './qos-bridge.js';
 import { statusCommand } from './commands/status.js';
@@ -362,6 +363,16 @@ Examples:
   // -----------------------------------------------------------------------
   // caphlon hive — Kovan Zekası (konsensüs + ortak önbellek + federated)
   // -----------------------------------------------------------------------
+  program
+    .command('cache')
+    .description('Token-tasarruf havuzu — sayaçlar + Git-Merkez senkronu (push/pull)')
+    .argument('[sub]', 'stats | sync')
+    .argument('[args...]', 'alt-komut argümanları (sync push|pull [owner/repo])')
+    .allowUnknownOption()
+    .action(async (sub, args) => {
+      await cacheCommand(sub, args ?? []);
+    });
+
   program
     .command('hive')
     .alias('kovan')

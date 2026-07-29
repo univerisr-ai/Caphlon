@@ -228,3 +228,16 @@ Kurulanlar: DualCache (kişisel/teknik ayrımı, sır kapısı, borrow→report,
 düzeltme akışı, est_tokens_saved), cache-mcp köprüsü (4 araç), CAPHLON.md
 zorunlu yaşam döngüsü talimatı, status Cache paneli. Benzerlik: stopword
 eleme + max(Jaccard, containment≥4-kelime) — parafraz isabeti e2e doğrulandı.
+
+
+## Git-Merkez — sunucusuz paylaşım omurgası (2026-07-29)
+
+Kullanıcı kararı: kartsız/ücretsiz/kalıcı tek altyapı GitHub olduğundan
+(Oracle/GCP/DO/pack VPS yolları sırayla elendi — kayıt/kredi engelleri),
+paylaşım omurgası git oldu: `caphlon cache sync push/pull [owner/repo]` —
+skill-sync'in mirror-clone deseni, pool.jsonl formatı, entry_id birleşimi
+(yüksek versiyon kazanır → düzeltmeler yayılır), içe aktarımda ikinci sır
+taraması, kişisel havuz asla senkrona girmez. Gerçek özel repo:
+univerisr-ai/caphlon-cache-pool (ilk push doğrulandı). 5 yeni test
+(yuvarlak tur, düzeltme yayılımı, sır freni). HTTP Merkez (Kovan) kodu
+alternatif olarak duruyor — canlı swarm gerekirse hazır.

@@ -138,9 +138,11 @@ caphlon init         # Initialize a project
 > regenerating it (~80-90% tokens saved per hit, measured model). Every borrow
 > closes with `cache_report` (worked / failed + correction), so broken
 > knowledge can't poison the pool. Personal notes never leave the machine;
-> shared entries pass a secret-scan gate. Optional multi-user sharing: point it
-> at a Hive coordinator with `caphlon hive hub <url>` — local misses then fall
-> back to the swarm pool (reputation-weighted, server-side secret gate too).
+> shared entries pass a secret-scan gate. Share across machines/teammates with
+> **zero servers**: `caphlon cache sync push <owner/repo>` mirrors the technical
+> pool to a git repo (JSONL; corrections propagate by version) and `pull` merges
+> it back — the proven skill-sync pattern. Alternatively point at a live Hive
+> coordinator with `caphlon hive hub <url>` for instant swarm sharing.
 > See `caphlon status` → Cache panel.
 
 > Every component binds to a single model: connect once with `caphlon connect`
