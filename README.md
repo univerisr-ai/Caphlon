@@ -126,6 +126,7 @@ caphlon run "..."    # Run a task
 caphlon design       # Design pipeline
 caphlon compose      # Compose workflow (8 stages; runs/resume: crash-safe continuation)
 caphlon skill        # Skill store: list/add/search/show/learn/evolve/sync
+caphlon forge "..."  # Evidence-gated code: N candidates, real tests eliminate, judge picks
 caphlon max          # Blind verification: generate N candidates, a SEPARATE judge model picks the winner
 caphlon serve        # LiteLLM proxy — expose the connected model as an OpenAI-compatible endpoint
 caphlon tools        # Connect external agent CLIs (e.g. Claude Code) to Caphlon
@@ -140,6 +141,34 @@ caphlon status       # System status
 caphlon doctor       # Diagnostics (--fix: repairs the setup)
 caphlon init         # Initialize a project
 ```
+
+## ⚒️ Forge — evidence-gated code (the part no other CLI does)
+
+Every coding CLI writes code and hands it to you; quality control is either the
+model's own opinion or you running the tests afterwards. Forge inverts the
+order — **"does it work?" is answered by your project's own tests, before
+"is it good?" is asked at all**:
+
+```bash
+caphlon connect groq --judge          # independent judge (recommended)
+caphlon forge "make slugify keep Turkish characters" -n 3
+```
+
+1. **Recall** — the solution cache and matching skills are injected into the task
+2. **Generate** — N candidates, each in its own **isolated git worktree**, written by the real Aider
+3. **Prove** — your project's real verify commands run in each (`npm test`, `pytest`, `cargo test`, …)
+4. **Eliminate** — a candidate that fails an essential check is **out**; no model opinion can save it
+5. **Choose** — an **independent judge** picks among the *proven-working* candidates only (falls back to a deterministic rule: fewer warnings, then smaller diff — simplicity wins)
+6. **Learn** — the winning solution goes into the cache for next time
+
+Honest guardrails: if the project has no test/build command, Forge **stops
+instead of guessing**; if no candidate passes, it **refuses to hand you
+unproven code**; the winner is applied to your working tree **without
+committing**, so you review the diff.
+
+Measured run (demo repo with a failing Turkish-slug test): 3 candidates → 1
+eliminated by the real test suite → judge picked between the 2 survivors →
+applied → suite green.
 
 > **Blind verification:** the producer can't grade its own work. Connect a
 > separate judge model and use max: `caphlon connect groq --judge` → `caphlon max "task"`.

@@ -27,6 +27,7 @@ import { skillCommand } from './commands/skill.js';
 import { serveCommand } from './commands/serve.js';
 import { toolsCommand } from './commands/tools.js';
 import { maxCommand } from './commands/max.js';
+import { forgeCommand } from './commands/forge.js';
 import { maybePromptUpdate } from './update.js';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -365,6 +366,24 @@ Examples:
   // -----------------------------------------------------------------------
   // caphlon hive — Kovan Zekası (konsensüs + ortak önbellek + federated)
   // -----------------------------------------------------------------------
+  program
+    .command('forge')
+    .description('Kanıt-kapılı kod: N aday izole worktree’de üretilir, projenin GERÇEK testleri eler, bağımsız judge seçer')
+    .argument('<task>', 'Ne yapılacak (net ve dar tarif en iyi sonucu verir)')
+    .option('-n, --candidates <n>', 'Aday sayısı (2-5, varsayılan 3)')
+    .addHelpText('after', `
+Akış:
+  hatırla (cache+skill) → üret (N aday, izole) → kanıtla (npm test/pytest/…)
+  → ele (testi geçmeyen yarış dışı) → seç (bağımsız judge) → uygula → öğren
+
+Örnek:
+  caphlon connect groq --judge          # bağımsız judge (önerilir)
+  caphlon forge "slugify Türkçe karakterleri korusun" -n 3
+`)
+    .action(async (task: string, options: { candidates?: string }) => {
+      await forgeCommand(task, options);
+    });
+
   program
     .command('cache')
     .description('Token-tasarruf havuzu — sayaçlar + Git-Merkez senkronu (push/pull)')
