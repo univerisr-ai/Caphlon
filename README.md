@@ -1,5 +1,9 @@
 # ⚡ Caphlon
 
+[![npm](https://img.shields.io/npm/v/caphlon)](https://www.npmjs.com/package/caphlon)
+[![CI](https://github.com/univerisr-ai/Caphlon/actions/workflows/ci.yml/badge.svg)](https://github.com/univerisr-ai/Caphlon/actions)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 **Unified AI Agent Platform** — Qualixar OS + Open Design + MiMo Code.
 
 A community-powered, decentralized AI development system built around Hive
