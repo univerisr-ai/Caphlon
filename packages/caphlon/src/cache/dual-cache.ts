@@ -117,6 +117,18 @@ export interface BorrowHit {
   failedCount: number;
 }
 
+/** Git-Merkez havuz satırı (pool.jsonl şeması) — yalnız TEKNİK havuz senkronlanır. */
+export interface PoolEntry {
+  entry_id: string;
+  version: number;
+  instruction: string;
+  output: string;
+  worked_count: number;
+  failed_count: number;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface CacheStats {
   personal: number;
   technical: number;
@@ -300,6 +312,60 @@ export class DualCache {
       return { ok: true, detail: 'işlendi — düzeltmen varsa correction ile gönder, havuz temiz kalsın' };
     }
     return { ok: false, detail: `kayıt bulunamadı: ${entryId}` };
+  }
+
+  /** Teknik havuzu Git-Merkez formatında dışa aktar (kişisel ASLA çıkmaz). */
+  exportTechnical(): PoolEntry[] {
+    return (
+      this.db('technical')
+        .prepare(
+          "SELECT entry_id, version, instruction, output, worked_count, failed_count, created_at, updated_at FROM solutions WHERE status = 'verified'",
+        )
+        .all() as PoolEntry[]
+    ).map((r) => ({ ...r }));
+  }
+
+  /**
+   * Havuz satırlarını teknik havuza içe aktar. Yoksa ekler; varsa yalnız daha
+   * YÜKSEK versiyonda günceller (düzeltmeler yayılır, eskisi ezilmez). İçe
+   * aktarımda sır taraması ikinci savunma hattıdır — bulgu varsa satır atlanır.
+   */
+  importEntries(entries: PoolEntry[]): { added: number; updated: number; skippedSecret: number } {
+    const db = this.db('technical');
+    let added = 0;
+    let updated = 0;
+    let skippedSecret = 0;
+    for (const e of entries) {
+      if (scanSecrets(e.instruction + '\n' + e.output).length) {
+        skippedSecret++;
+        continue;
+      }
+      const cur = db.prepare('SELECT version FROM solutions WHERE entry_id = ?').get(e.entry_id) as
+        | { version: number }
+        | undefined;
+      if (!cur) {
+        db.prepare(
+          'INSERT INTO solutions (entry_id, version, instruction, output, tokens, worked_count, failed_count, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        ).run(
+          e.entry_id,
+          e.version,
+          e.instruction,
+          e.output,
+          JSON.stringify([...tokenize(e.instruction)]),
+          e.worked_count ?? 0,
+          e.failed_count ?? 0,
+          e.created_at ?? Date.now(),
+          e.updated_at ?? Date.now(),
+        );
+        added++;
+      } else if (e.version > cur.version) {
+        db.prepare(
+          'UPDATE solutions SET version = ?, output = ?, worked_count = ?, failed_count = ?, updated_at = ? WHERE entry_id = ?',
+        ).run(e.version, e.output, e.worked_count ?? 0, e.failed_count ?? 0, e.updated_at ?? Date.now(), e.entry_id);
+        updated++;
+      }
+    }
+    return { added, updated, skippedSecret };
   }
 
   stats(): CacheStats {
