@@ -238,6 +238,6 @@ paylaşım omurgası git oldu: `caphlon cache sync push/pull [owner/repo]` —
 skill-sync'in mirror-clone deseni, pool.jsonl formatı, entry_id birleşimi
 (yüksek versiyon kazanır → düzeltmeler yayılır), içe aktarımda ikinci sır
 taraması, kişisel havuz asla senkrona girmez. Gerçek özel repo:
-univerisr-ai/caphlon-cache-pool (ilk push doğrulandı). 5 yeni test
+demiralpdev/caphlon-cache-pool (ilk push doğrulandı). 5 yeni test
 (yuvarlak tur, düzeltme yayılımı, sır freni). HTTP Merkez (Kovan) kodu
 alternatif olarak duruyor — canlı swarm gerekirse hazır.

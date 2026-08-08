@@ -1,7 +1,7 @@
 # ⚡ Caphlon
 
 [![npm](https://img.shields.io/npm/v/caphlon)](https://www.npmjs.com/package/caphlon)
-[![CI](https://github.com/univerisr-ai/Caphlon/actions/workflows/ci.yml/badge.svg)](https://github.com/univerisr-ai/Caphlon/actions)
+[![CI](https://github.com/demiralpdev/Caphlon/actions/workflows/ci.yml/badge.svg)](https://github.com/demiralpdev/Caphlon/actions)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 **Unified AI Agent Platform** — Qualixar OS + Open Design + MiMo Code.
@@ -36,7 +36,7 @@ caphlon                  # talk
 <summary>From source instead (contributors)</summary>
 
 ```bash
-git clone https://github.com/univerisr-ai/Caphlon.git && cd Caphlon
+git clone https://github.com/demiralpdev/Caphlon.git && cd Caphlon
 bash scripts/setup-cores.sh        # fetch tools + build (idempotent)
 node packages/caphlon/bin/caphlon.js doctor
 cd packages/caphlon && npm link    # optional: `caphlon` from anywhere

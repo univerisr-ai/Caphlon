@@ -13,7 +13,7 @@ Thanks for stopping by! This project runs on three hard rules:
 ## Dev setup
 
 ```bash
-git clone https://github.com/univerisr-ai/Caphlon.git && cd Caphlon
+git clone https://github.com/demiralpdev/Caphlon.git && cd Caphlon
 bash scripts/setup-cores.sh          # fetches real tools + builds (idempotent)
 cd packages/caphlon
 npm test && npm run typecheck        # 129+ tests should be green

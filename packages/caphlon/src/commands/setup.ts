@@ -17,7 +17,7 @@ import { dirname, join } from 'node:path';
 import chalk from 'chalk';
 import { onPath, projectRoot, spawnInherit } from '../external.js';
 
-const REPO_URL = 'https://github.com/univerisr-ai/Caphlon.git';
+const REPO_URL = 'https://github.com/demiralpdev/Caphlon.git';
 
 export async function setupCommand(opts: { all?: boolean } = {}): Promise<void> {
   const root = projectRoot();
